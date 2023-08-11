@@ -195,9 +195,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 sample_deepdream_image = sample_deepdream_image.numpy()
                 sample_output_image = sample_output_image.numpy()
                 sample_input_image = (sample_input_image * 255).astype(np.uint8)
-                sample_deepdream_image = (
-                    sample_deepdream_image * 255
-                ).astype(np.uint8)
+                sample_deepdream_image = (sample_deepdream_image * 255).astype(np.uint8)
                 sample_output_image = (sample_output_image * 255).astype(np.uint8)
                 input_save_path = f"outputs/sample_input_{step}.jpg"
                 deepdream_save_path = f"outputs/sample_deepdream_{step}.jpg"

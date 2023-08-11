@@ -19,15 +19,15 @@ discriminator:
 
 optimizer:
   _optimizer: "adamw"
-  lr: 2e-5  # Low LR is necessary for stability
+  lr: 1e-4
   weight_decay: 5e-2
   lr_schedule: "invsqrt"
   adam_eps: 1e-4
   beta1: 0.9
-  beta2: 0.99  # Lower than for transformers... Dataset shifts under the networks
+  beta2: 0.99  # Lower than for transformers... Distribution shifts under the networks
   warmup_iters: 1_000
   max_iters: 50_000
-  init_std: 2e-2
+  init_std: 5e-3  # Low init_std works well
   batch_size: 8
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"

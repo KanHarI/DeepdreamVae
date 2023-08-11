@@ -44,6 +44,14 @@ class DeepdreamVAE(torch.nn.Module):
             block_channels *= 2
             image_size //= 2
         image_size *= 2
+        self.noise_volume = torch.nn.Parameter(
+            torch.zeros(
+                (block_channels,),
+                device=self.config.device,
+                dtype=self.config.dtype,
+                requires_grad=True,
+            )
+        )
         self.decoders_blocks_config: list[BlockConfig] = []
         for i in range(self.config.n_blocks):
             self.decoders_blocks_config.append(
@@ -100,7 +108,9 @@ class DeepdreamVAE(torch.nn.Module):
             x = encoder_block(x)
             skipped.append(x)
             x = torch.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
-        x = x + torch.randn_like(x)
+        x = x + torch.einsum(
+            "bchw,c->bchw", torch.randn_like(x), torch.exp(self.noise_volume)
+        )
         for decoder_block in self.decoders_blocks:
             x = torch.nn.functional.interpolate(x, scale_factor=2, mode="nearest")
             x += skipped.pop()
