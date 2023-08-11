@@ -1,11 +1,21 @@
 unet:
-  n_blocks: 3
+  n_blocks: 4
   n_layers_per_block: 3
   n_first_block_channels: 8
   _activation: "new_gelu"
   ln_eps: 1e-5
   device: "cuda"
   _dtype: "float16"
+
+discriminator:
+  n_blocks: 4
+  n_layers_per_block: 3
+  n_first_block_channels: 8
+  _activation: "new_gelu"
+  ln_eps: 1e-5
+  device: "cuda"
+  _dtype: "float16"
+  loss_eps: 1e-4
 
 optimizer:
   _optimizer: "adamw"

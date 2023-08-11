@@ -1,5 +1,6 @@
 import dataclasses
 
+from deepdream_vae.conf.building_blocks.discriminator import DiscriminatorConf
 from deepdream_vae.conf.building_blocks.optimizer import OptimizerConf
 from deepdream_vae.conf.building_blocks.unet import UNetConf
 
@@ -7,6 +8,7 @@ from deepdream_vae.conf.building_blocks.unet import UNetConf
 @dataclasses.dataclass
 class Resnet50StillsExperimentConf:
     unet: UNetConf
+    discriminator: DiscriminatorConf
     optimizer: OptimizerConf
     source_files_path: str
     processed_files_path: str

@@ -3,10 +3,7 @@ from typing import Callable
 
 import torch
 
-from deepdream_vae.models.deepdream_vae_block import (
-    DeepdreamVAEBlock,
-    DeepdreamVAEBlockConfig,
-)
+from deepdream_vae.models.block import Block, BlockConfig
 
 
 @dataclasses.dataclass
@@ -26,12 +23,12 @@ class DeepdreamVAE(torch.nn.Module):
     def __init__(self, config: DeepdreamVAEConfig):
         super().__init__()
         self.config = config
-        self.encoder_blocks_config: list[DeepdreamVAEBlockConfig] = []
+        self.encoder_blocks_config: list[BlockConfig] = []
         block_channels = self.config.n_first_block_channels
         image_size = self.config.image_size
         for i in range(self.config.n_blocks):
             self.encoder_blocks_config.append(
-                DeepdreamVAEBlockConfig(
+                BlockConfig(
                     n_layers=self.config.n_layers_per_block,
                     n_channels_in=block_channels,
                     n_channels_out=block_channels * 2,
@@ -47,10 +44,10 @@ class DeepdreamVAE(torch.nn.Module):
             block_channels *= 2
             image_size //= 2
         image_size *= 2
-        self.decoders_blocks_config: list[DeepdreamVAEBlockConfig] = []
+        self.decoders_blocks_config: list[BlockConfig] = []
         for i in range(self.config.n_blocks):
             self.decoders_blocks_config.append(
-                DeepdreamVAEBlockConfig(
+                BlockConfig(
                     n_layers=self.config.n_layers_per_block,
                     n_channels_in=block_channels,
                     n_channels_out=block_channels // 2,
@@ -66,10 +63,10 @@ class DeepdreamVAE(torch.nn.Module):
             block_channels //= 2
             image_size *= 2
         self.encoder_blocks = torch.nn.ModuleList(
-            [DeepdreamVAEBlock(config) for config in self.encoder_blocks_config]
+            [Block(config) for config in self.encoder_blocks_config]
         )
         self.decoders_blocks = torch.nn.ModuleList(
-            [DeepdreamVAEBlock(config) for config in self.decoders_blocks_config]
+            [Block(config) for config in self.decoders_blocks_config]
         )
         self.channels_expander = torch.zeros(
             (3, self.config.n_first_block_channels),
@@ -112,6 +109,4 @@ class DeepdreamVAE(torch.nn.Module):
         return x
 
     def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        x = self.transform(x)
-        loss = torch.sqrt(((y - x) ** 2).mean())
-        return loss
+        return self.transform(x)

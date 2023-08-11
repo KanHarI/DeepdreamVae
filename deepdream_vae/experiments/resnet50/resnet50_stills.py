@@ -16,6 +16,7 @@ from deepdream_vae.datasets.resnet50_deepdream import (
     Resnet50DeepdreamDatasetConfig,
 )
 from deepdream_vae.models.deepdream_vae import DeepdreamVAE, DeepdreamVAEConfig
+from deepdream_vae.models.discriminator import Discriminator, DiscriminatorConfig
 
 
 @hydra.main(
@@ -72,13 +73,27 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         ln_eps=config.unet.ln_eps,
         image_size=config.image_size,
     )
-    model = DeepdreamVAE(model_conf)
-    model.init_weights()
-    model.train()
+    generative_model = DeepdreamVAE(model_conf)
+    generative_model.init_weights()
+    generative_model.train()
+    discriminator_config = DiscriminatorConfig(
+        n_blocks=config.discriminator.n_blocks,
+        n_layers_per_block=config.discriminator.n_layers_per_block,
+        n_first_block_channels=config.discriminator.n_first_block_channels,
+        init_std=config.optimizer.init_std,
+        activation=config.discriminator.activation,
+        device=config.discriminator.device,
+        dtype=config.discriminator.dtype,
+        ln_eps=config.discriminator.ln_eps,
+        image_size=config.image_size,
+        loss_eps=config.discriminator.loss_eps,
+    )
+    discriminator = Discriminator(discriminator_config)
     if config.compile_model:
-        model = torch.compile(model)  # type: ignore
+        generative_model = torch.compile(generative_model)  # type: ignore
+        discriminator = torch.compile(discriminator)  # type: ignore
     print("Creating optimizer...")
-    optimizer = config.optimizer.create_optimizer(model.parameters())
+    optimizer = config.optimizer.create_optimizer(generative_model.parameters())
     print("Starting training...")
     train_losses = torch.zeros(
         (config.eval_interval), device="cpu", dtype=torch.float32
@@ -88,8 +103,17 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         eval_losses = torch.zeros(
             (config.eval_iters), device="cpu", dtype=torch.float32
         )
+        eval_transformed_discriminator_losses = torch.zeros(
+            (config.eval_iters), device="cpu", dtype=torch.float32
+        )
+        eval_deepdream_discriminator_losses = torch.zeros(
+            (config.eval_iters), device="cpu", dtype=torch.float32
+        )
+        eval_mixed_losses = torch.zeros(
+            (config.eval_iters), device="cpu", dtype=torch.float32
+        )
         if step % config.eval_interval == 0:
-            model.eval()
+            generative_model.eval()
             with torch.no_grad():
                 for i in tqdm(range(config.eval_iters)):
                     batch = next(iter(test_dataloader))
@@ -99,9 +123,50 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                             for t in batch
                         ]
                     )
-                    loss = model(*batch)
+                    transformed_images = generative_model(*batch)
+                    transformed_discriminator_loss = discriminator(
+                        transformed_images[0],
+                        torch.zeros(
+                            (transformed_images[0].shape[0]),
+                            device=config.discriminator.device,
+                            dtype=config.discriminator.dtype,
+                        ),
+                    )
+                    deepdream_discriminator_loss = discriminator(
+                        batch[1],
+                        torch.ones(
+                            (transformed_images[0].shape[0]),
+                            device=config.discriminator.device,
+                            dtype=config.discriminator.dtype,
+                        ),
+                    )
+                    random_mixes_ratios = torch.rand(
+                        (batch[0].shape[0],),
+                        device=config.discriminator.device,
+                        dtype=config.discriminator.dtype,
+                    )
+                    random_mixes = (
+                        random_mixes_ratios * batch[1]
+                        + (1 - random_mixes_ratios) * transformed_images[0]
+                    )
+                    mixed_discriminator_loss = discriminator(
+                        random_mixes,
+                        random_mixes_ratios,
+                    )
+                    loss = (
+                        transformed_discriminator_loss
+                        + deepdream_discriminator_loss
+                        + mixed_discriminator_loss
+                    )
                     eval_losses[i] = loss.item()
-                sample_output_image = model.transform(batch[0])
+                    eval_transformed_discriminator_losses[
+                        i
+                    ] = transformed_discriminator_loss.item()
+                    eval_deepdream_discriminator_losses[
+                        i
+                    ] = deepdream_discriminator_loss.item()
+                    eval_mixed_losses[i] = mixed_discriminator_loss.item()
+                sample_output_image = transformed_images[0]
                 # Save sample output image to `outputs` directory
                 sample_output_image = sample_output_image[0].detach().cpu()
                 sample_output_image = sample_output_image.permute(1, 2, 0)
@@ -117,22 +182,60 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                         {
                             "eval_loss": eval_losses.mean().item(),
                             "eval_loss_std": eval_losses.std().item(),
+                            "eval_transformed_discriminator_loss": eval_transformed_discriminator_losses.mean().item(),
+                            "eval_deepdream_discriminator_loss": eval_deepdream_discriminator_losses.mean().item(),
+                            "eval_mixed_discriminator_loss": eval_mixed_losses.mean().item(),
                             "train_loss": train_losses.mean().item(),
                             "train_loss_std": train_losses.std().item(),
                             "lr": config.optimizer.get_lr(step),
-                        }
+                        },
+                        step=step,
                     )
                 # Print eval metrics
                 print(
                     f"Step {step} eval loss: {eval_losses.mean().item()} +/- {eval_losses.std().item()}\n"
                     f"train loss: {train_losses.mean().item()} +/- {train_losses.std().item()}, lr: {config.optimizer.get_lr(step)}\n"
                 )
-            model.train()
+            generative_model.train()
         batch = next(iter(train_dataloader))
         batch = tuple(
             [t.to(device=config.unet.device, dtype=config.unet.dtype) for t in batch]
         )
-        loss = model(*batch)
+        transformed_images = generative_model(*batch)
+        transformed_discriminator_loss = discriminator(
+            transformed_images[0],
+            torch.zeros(
+                (transformed_images[0].shape[0]),
+                device=config.discriminator.device,
+                dtype=config.discriminator.dtype,
+            ),
+        )
+        deepdream_discriminator_loss = discriminator(
+            batch[1],
+            torch.ones(
+                (transformed_images[0].shape[0]),
+                device=config.discriminator.device,
+                dtype=config.discriminator.dtype,
+            ),
+        )
+        random_mixes_ratios = torch.rand(
+            (batch[0].shape[0],),
+            device=config.discriminator.device,
+            dtype=config.discriminator.dtype,
+        )
+        random_mixes = (
+            random_mixes_ratios * batch[1]
+            + (1 - random_mixes_ratios) * transformed_images[0]
+        )
+        mixed_discriminator_loss = discriminator(
+            random_mixes,
+            random_mixes_ratios,
+        )
+        loss = (
+            transformed_discriminator_loss
+            + deepdream_discriminator_loss
+            + mixed_discriminator_loss
+        )
         for param_group in optimizer.param_groups:
             param_group["lr"] = config.optimizer.get_lr(step)
         optimizer.zero_grad()

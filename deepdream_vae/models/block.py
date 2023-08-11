@@ -5,7 +5,7 @@ import torch
 
 
 @dataclasses.dataclass
-class DeepdreamVAEBlockConfig:
+class BlockConfig:
     n_layers: int
     n_channels_in: int
     n_channels_out: int
@@ -18,8 +18,8 @@ class DeepdreamVAEBlockConfig:
     image_size: int
 
 
-class DeepdreamVAEBlock(torch.nn.Module):
-    def __init__(self, config: DeepdreamVAEBlockConfig):
+class Block(torch.nn.Module):
+    def __init__(self, config: BlockConfig):
         super().__init__()
         self.config = config
         self.first_conv = torch.nn.Conv2d(
