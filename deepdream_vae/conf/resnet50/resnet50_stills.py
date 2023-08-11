@@ -15,3 +15,5 @@ class Resnet50StillsExperimentConf:
     log_interval: int
     wandb_log: bool
     wandb_run_name: str
+    compile_model: bool
+    image_size: int

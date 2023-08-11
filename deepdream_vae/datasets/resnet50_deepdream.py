@@ -13,6 +13,7 @@ class Resnet50DeepdreamDatasetConfig:
     processed_path: str
     origin_path: str
     is_train: bool
+    image_size: int
 
 
 # 0--Parade            14--Traffic         19--Couple        23--Shoppers          28--Sports_Fan           32--Worker_Laborer  37--Soccer       41--Swimming    46--Jockey                   50--Celebration_Or_Party  55--Sports_Coach_Trainer  5--Car_Accident      9--Press_Conference
@@ -49,8 +50,9 @@ THREE_WORD_NAME_NUMBERS = [
     55,
 ]
 
-SKIP_NUMBERS = [
-    59,
+SKIP_PHRASES = [
+    "59_",
+    "peopledrivingcar",
 ]
 
 
@@ -84,7 +86,8 @@ class Resnet50DeepdreamDataset(
             )
         self.transform = transforms.Compose(
             [
-                transforms.RandomCrop(256),
+                self.tile_small_images,
+                transforms.RandomCrop(self.config.image_size),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
             ]
@@ -110,10 +113,22 @@ class Resnet50DeepdreamDataset(
         }
 
     def _is_skip_file(self, filename: str) -> bool:
-        for num in SKIP_NUMBERS:
-            if filename.startswith(f"{num}_"):
+        for skip_phrase in SKIP_PHRASES:
+            if skip_phrase in filename:
                 return True
         return False
+
+    def tile_small_images(self, image: Image.Image) -> Image.Image:
+        if (
+            image.size[0] < self.config.image_size
+            or image.size[1] < self.config.image_size
+        ):
+            factor_x = max(1, self.config.image_size // image.size[0] + 1)
+            factor_y = max(1, self.config.image_size // image.size[1] + 1)
+            image = image.crop(
+                (0, 0, image.size[0] * factor_x, image.size[1] * factor_y)
+            )
+        return image
 
     def __len__(self) -> int:
         return len(self.processed_files)

@@ -4,14 +4,15 @@ unet:
   n_first_block_channels: 8
   _activation: "new_gelu"
   ln_eps: 1e-5
-  device: "cpu"
-  _dtype: "float32"
+  device: "cuda"
+  _dtype: "float16"
 
 optimizer:
   _optimizer: "adamw"
   lr: 1e-4
   weight_decay: 5e-2
   lr_schedule: "invsqrt"
+  adam_eps: 1e-4
   beta1: 0.9
   beta2: 0.999
   warmup_iters: 1_000
@@ -24,5 +25,7 @@ processed_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/data/out-im
 eval_interval: 200
 eval_iters: 25
 log_interval: 10
-wandb_log: false
+wandb_log: true
 wandb_run_name: "first-run"
+compile_model: false
+image_size: 256

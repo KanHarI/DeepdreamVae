@@ -17,6 +17,7 @@ class OptimizerConf:
     max_iters: int
     init_std: float
     batch_size: int
+    adam_eps: float
 
     def create_optimizer(self, params: Any) -> torch.optim.Optimizer:
         match self._optimizer:
@@ -26,6 +27,7 @@ class OptimizerConf:
                     lr=self.lr,
                     weight_decay=self.weight_decay,
                     betas=(self.beta1, self.beta2),
+                    eps=self.adam_eps,
                 )
             case "sgd":
                 return torch.optim.SGD(
