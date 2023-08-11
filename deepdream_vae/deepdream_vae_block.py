@@ -39,6 +39,12 @@ class DeepdreamVAEBlock(torch.nn.Module):
                 for _ in range(self.config.n_layers - 1)
             ]
         )
+        self.layer_norms = torch.nn.ModuleList(
+            [
+                torch.nn.LayerNorm(self.config.n_channels_out)
+                for _ in range(self.config.n_layers)
+            ]
+        )
 
     def init_weights(self) -> None:
         torch.nn.init.normal_(self.first_conv.weight, std=self.config.init_std)
@@ -46,7 +52,7 @@ class DeepdreamVAEBlock(torch.nn.Module):
             torch.nn.init.normal_(conv_layer.weight, std=self.config.init_std)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = self.first_conv(x)
-        for conv_layer in self.conv_layers:
-            x = x + conv_layer(x)
+        x = self.first_conv(self.layer_norms[0](x))
+        for j, conv_layer in enumerate(self.conv_layers):
+            x = x + conv_layer(self.layer_norms[j + 1](x))
         return x
