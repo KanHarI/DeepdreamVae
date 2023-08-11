@@ -1,5 +1,5 @@
 import dataclasses
-import math
+from typing import Callable
 
 import torch
 
@@ -8,21 +8,11 @@ from deepdream_vae.deepdream_vae_block import DeepdreamVAEBlock, DeepdreamVAEBlo
 
 @dataclasses.dataclass
 class DeepdreamVAEConfig:
-    n_blocks_per_side: int
     n_layers_per_block: int
     n_blocks: int
     n_first_block_channels: int
-
-
-def new_gelu(x: torch.Tensor) -> torch.Tensor:
-    return (
-        0.5
-        * x
-        * (
-            1.0
-            + torch.tanh(math.sqrt(2.0 / math.pi) * (x + 0.044715 * torch.pow(x, 3.0)))
-        )
-    )
+    init_std: float
+    activation: Callable[[torch.Tensor], torch.Tensor]
 
 
 class DeepdreamVAE(torch.nn.Module):
@@ -37,7 +27,7 @@ class DeepdreamVAE(torch.nn.Module):
                     n_layers=self.config.n_layers_per_block,
                     n_channels_in=block_channels,
                     n_channels_out=block_channels * 2,
-                    activation=new_gelu,
+                    activation=self.config.activation,
                     dropout=0.0,
                     init_std=0.02,
                 )
@@ -50,7 +40,7 @@ class DeepdreamVAE(torch.nn.Module):
                     n_layers=self.config.n_layers_per_block,
                     n_channels_in=block_channels,
                     n_channels_out=block_channels // 2,
-                    activation=new_gelu,
+                    activation=self.config.activation,
                     dropout=0.0,
                     init_std=0.02,
                 )
