@@ -12,6 +12,9 @@ class DeepdreamVAEBlockConfig:
     activation: Callable[[torch.Tensor], torch.Tensor]
     dropout: float
     init_std: float
+    device: str
+    dtype: torch.dtype
+    ln_eps: float
 
 
 class DeepdreamVAEBlock(torch.nn.Module):
@@ -25,6 +28,8 @@ class DeepdreamVAEBlock(torch.nn.Module):
             stride=1,
             padding=1,
             bias=False,
+            device=self.config.device,
+            dtype=self.config.dtype,
         )
         self.conv_layers = torch.nn.ModuleList(
             [
@@ -35,14 +40,27 @@ class DeepdreamVAEBlock(torch.nn.Module):
                     stride=1,
                     padding=1,
                     bias=False,
+                    device=self.config.device,
+                    dtype=self.config.dtype,
                 )
                 for _ in range(self.config.n_layers - 1)
             ]
         )
+        self.first_layer_norm = torch.nn.LayerNorm(
+            self.config.n_channels_in,
+            eps=self.config.ln_eps,
+            device=self.config.device,
+            dtype=self.config.dtype,
+        )
         self.layer_norms = torch.nn.ModuleList(
             [
-                torch.nn.LayerNorm(self.config.n_channels_out)
-                for _ in range(self.config.n_layers)
+                torch.nn.LayerNorm(
+                    self.config.n_channels_out,
+                    eps=self.config.ln_eps,
+                    device=self.config.device,
+                    dtype=self.config.dtype,
+                )
+                for _ in range(self.config.n_layers - 1)
             ]
         )
 
@@ -54,5 +72,5 @@ class DeepdreamVAEBlock(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.first_conv(self.layer_norms[0](x))
         for j, conv_layer in enumerate(self.conv_layers):
-            x = x + conv_layer(self.layer_norms[j + 1](x))
+            x = x + conv_layer(self.layer_norms[j](x))
         return x

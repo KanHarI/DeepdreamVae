@@ -3,6 +3,9 @@ unet:
   n_layers_per_block: 3
   n_first_block_channels: 8
   _activation: "new_gelu"
+  ln_eps: 1e-5
+  device: "cpu"
+  _dtype: "float32"
 
 optimizer:
   _optimizer: "adamw"

@@ -3,7 +3,10 @@ from typing import Callable
 
 import torch
 
-from deepdream_vae.models.deepdream_vae_block import DeepdreamVAEBlock, DeepdreamVAEBlockConfig
+from deepdream_vae.models.deepdream_vae_block import (
+    DeepdreamVAEBlock,
+    DeepdreamVAEBlockConfig,
+)
 
 
 @dataclasses.dataclass
@@ -13,6 +16,9 @@ class DeepdreamVAEConfig:
     n_first_block_channels: int
     init_std: float
     activation: Callable[[torch.Tensor], torch.Tensor]
+    device: str
+    dtype: torch.dtype
+    ln_eps: float
 
 
 class DeepdreamVAE(torch.nn.Module):
@@ -30,6 +36,9 @@ class DeepdreamVAE(torch.nn.Module):
                     activation=self.config.activation,
                     dropout=0.0,
                     init_std=0.02,
+                    device=self.config.device,
+                    dtype=self.config.dtype,
+                    ln_eps=self.config.ln_eps,
                 )
             )
             block_channels *= 2
@@ -43,6 +52,9 @@ class DeepdreamVAE(torch.nn.Module):
                     activation=self.config.activation,
                     dropout=0.0,
                     init_std=0.02,
+                    device=self.config.device,
+                    dtype=self.config.dtype,
+                    ln_eps=self.config.ln_eps,
                 )
             )
             block_channels //= 2
