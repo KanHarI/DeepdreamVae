@@ -28,7 +28,7 @@ class Block(torch.nn.Module):
             kernel_size=3,
             stride=1,
             padding=1,
-            bias=False,
+            bias=True,
             device=self.config.device,
             dtype=self.config.dtype,
         )
@@ -40,7 +40,7 @@ class Block(torch.nn.Module):
                     kernel_size=3,
                     stride=1,
                     padding=1,
-                    bias=False,
+                    bias=True,
                     device=self.config.device,
                     dtype=self.config.dtype,
                 )

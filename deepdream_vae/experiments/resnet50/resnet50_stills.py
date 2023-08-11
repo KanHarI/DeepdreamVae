@@ -89,18 +89,32 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         loss_eps=config.discriminator.loss_eps,
     )
     discriminator = Discriminator(discriminator_config)
+    discriminator.init_weights()
+    discriminator.train()
     if config.compile_model:
         generative_model = torch.compile(generative_model)  # type: ignore
         discriminator = torch.compile(discriminator)  # type: ignore
     print("Creating optimizer...")
-    optimizer = config.optimizer.create_optimizer(generative_model.parameters())
+    generator_optimizer = config.optimizer.create_optimizer(
+        generative_model.parameters()
+    )
+    discriminator_optimizer = config.optimizer.create_optimizer(
+        discriminator.parameters()
+    )
     print("Starting training...")
-    train_losses = torch.zeros(
+    train_generator_losses = torch.zeros(
         (config.eval_interval), device="cpu", dtype=torch.float32
     )
-    train_losses += float("inf")
+    train_discriminator_losses = torch.zeros(
+        (config.eval_interval), device="cpu", dtype=torch.float32
+    )
+    train_generator_losses += float("inf")
+    train_discriminator_losses += float("inf")
     for step in range(config.optimizer.max_iters):
-        eval_losses = torch.zeros(
+        eval_generator_losses = torch.zeros(
+            (config.eval_iters), device="cpu", dtype=torch.float32
+        )
+        eval_discriminator_losses = torch.zeros(
             (config.eval_iters), device="cpu", dtype=torch.float32
         )
         eval_transformed_discriminator_losses = torch.zeros(
@@ -114,6 +128,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         )
         if step % config.eval_interval == 0:
             generative_model.eval()
+            discriminator.eval()
             with torch.no_grad():
                 for i in tqdm(range(config.eval_iters)):
                     batch = next(iter(test_dataloader))
@@ -125,40 +140,43 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                     )
                     transformed_images = generative_model(*batch)
                     transformed_discriminator_loss = discriminator(
-                        transformed_images[0],
+                        torch.cat([batch[0], transformed_images], dim=1),
                         torch.zeros(
-                            (transformed_images[0].shape[0]),
+                            (transformed_images.shape[0]),
                             device=config.discriminator.device,
                             dtype=config.discriminator.dtype,
                         ),
                     )
+                    generator_loss = -transformed_discriminator_loss
                     deepdream_discriminator_loss = discriminator(
-                        batch[1],
+                        torch.cat([batch[0], batch[1]], dim=1),
                         torch.ones(
-                            (transformed_images[0].shape[0]),
+                            (transformed_images.shape[0]),
                             device=config.discriminator.device,
                             dtype=config.discriminator.dtype,
                         ),
                     )
                     random_mixes_ratios = torch.rand(
-                        (batch[0].shape[0],),
+                        (transformed_images.shape[0], 1, 1, 1),
                         device=config.discriminator.device,
                         dtype=config.discriminator.dtype,
                     )
-                    random_mixes = (
-                        random_mixes_ratios * batch[1]
-                        + (1 - random_mixes_ratios) * transformed_images[0]
+                    random_mixes = batch[
+                        1
+                    ] * random_mixes_ratios + transformed_images.detach() * (
+                        1 - random_mixes_ratios
                     )
                     mixed_discriminator_loss = discriminator(
-                        random_mixes,
-                        random_mixes_ratios,
+                        torch.cat([batch[0], random_mixes], dim=1),
+                        random_mixes_ratios.squeeze(3).squeeze(2).squeeze(1),
                     )
-                    loss = (
+                    discriminator_loss = (
                         transformed_discriminator_loss
                         + deepdream_discriminator_loss
                         + mixed_discriminator_loss
                     )
-                    eval_losses[i] = loss.item()
+                    eval_generator_losses[i] = generator_loss.item()
+                    eval_discriminator_losses[i] = discriminator_loss.item()
                     eval_transformed_discriminator_losses[
                         i
                     ] = transformed_discriminator_loss.item()
@@ -166,84 +184,116 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                         i
                     ] = deepdream_discriminator_loss.item()
                     eval_mixed_losses[i] = mixed_discriminator_loss.item()
-                sample_output_image = transformed_images[0]
                 # Save sample output image to `outputs` directory
-                sample_output_image = sample_output_image[0].detach().cpu()
+                sample_input_image = ((batch[0][0] + 1) / 2).detach().cpu()
+                sample_deepdream_image = ((batch[1][0] + 1) / 2).detach().cpu()
+                sample_output_image = ((transformed_images[0] + 1) / 2).detach().cpu()
+                sample_input_image = sample_input_image.permute(1, 2, 0)
+                sample_deepdream_image = sample_deepdream_image.permute(1, 2, 0)
                 sample_output_image = sample_output_image.permute(1, 2, 0)
+                sample_input_image = sample_input_image.numpy()
+                sample_deepdream_image = sample_deepdream_image.numpy()
                 sample_output_image = sample_output_image.numpy()
-                sample_output_image = (sample_output_image * 255).astype(np.uint8)  # type: ignore
-                save_path = f"outputs/sample_output_{step}.jpg"
-                print(f"Saving sample output image to {save_path}")
-                image_to_save = Image.fromarray(sample_output_image)
-                image_to_save.save(save_path)
+                sample_input_image = (sample_input_image * 255).astype(np.uint8)
+                sample_deepdream_image = (
+                    sample_deepdream_image * 255
+                ).astype(np.uint8)
+                sample_output_image = (sample_output_image * 255).astype(np.uint8)
+                input_save_path = f"outputs/sample_input_{step}.jpg"
+                deepdream_save_path = f"outputs/sample_deepdream_{step}.jpg"
+                output_save_path = f"outputs/sample_output_{step}.jpg"
+                print(f"Saving sample output image to {output_save_path}")
+                input_image_to_save = Image.fromarray(sample_input_image)
+                deepdream_image_to_save = Image.fromarray(sample_deepdream_image)
+                input_image_to_save.save(input_save_path)
+                deepdream_image_to_save.save(deepdream_save_path)
+                output_image_to_save = Image.fromarray(sample_output_image)
+                output_image_to_save.save(output_save_path)
                 # Log eval metrics to wandb
                 if config.wandb_log:
                     wandb.log(
                         {
-                            "eval_loss": eval_losses.mean().item(),
-                            "eval_loss_std": eval_losses.std().item(),
+                            "eval_generator_loss": eval_generator_losses.mean().item(),
+                            "eval_generator_loss_std": eval_generator_losses.std().item(),
+                            "eval_discriminator_loss": eval_discriminator_losses.mean().item(),
+                            "eval_discriminator_losses_std": eval_discriminator_losses.std().item(),
                             "eval_transformed_discriminator_loss": eval_transformed_discriminator_losses.mean().item(),
                             "eval_deepdream_discriminator_loss": eval_deepdream_discriminator_losses.mean().item(),
                             "eval_mixed_discriminator_loss": eval_mixed_losses.mean().item(),
-                            "train_loss": train_losses.mean().item(),
-                            "train_loss_std": train_losses.std().item(),
+                            "train_generator_loss": train_generator_losses.mean().item(),
+                            "train_generator_loss_std": train_generator_losses.std().item(),
+                            "train_discriminator_loss": train_discriminator_losses.mean().item(),
+                            "train_discriminator_loss_std": train_discriminator_losses.std().item(),
                             "lr": config.optimizer.get_lr(step),
                         },
                         step=step,
                     )
                 # Print eval metrics
                 print(
-                    f"Step {step} eval loss: {eval_losses.mean().item()} +/- {eval_losses.std().item()}\n"
-                    f"train loss: {train_losses.mean().item()} +/- {train_losses.std().item()}, lr: {config.optimizer.get_lr(step)}\n"
+                    f"Step {step}: eval_generator_loss: {eval_generator_losses.mean().item()}, eval_discriminator_loss: {eval_discriminator_losses.mean().item()}, eval_transformed_discriminator_loss: {eval_transformed_discriminator_losses.mean().item()}, eval_deepdream_discriminator_loss: {eval_deepdream_discriminator_losses.mean().item()}, eval_mixed_discriminator_loss: {eval_mixed_losses.mean().item()}"
+                    f"train_generator_loss: {train_generator_losses.mean().item()}, train_discriminator_loss: {train_discriminator_losses.mean().item()}"
+                    f"lr: {config.optimizer.get_lr(step)}"
                 )
             generative_model.train()
+            discriminator.train()
         batch = next(iter(train_dataloader))
         batch = tuple(
             [t.to(device=config.unet.device, dtype=config.unet.dtype) for t in batch]
         )
         transformed_images = generative_model(*batch)
         transformed_discriminator_loss = discriminator(
-            transformed_images[0],
+            torch.cat([batch[0], transformed_images], dim=1),
             torch.zeros(
-                (transformed_images[0].shape[0]),
+                (transformed_images.shape[0]),
                 device=config.discriminator.device,
                 dtype=config.discriminator.dtype,
             ),
         )
+        generator_loss = -transformed_discriminator_loss
         deepdream_discriminator_loss = discriminator(
-            batch[1],
+            torch.cat([batch[0], batch[1]], dim=1),
             torch.ones(
-                (transformed_images[0].shape[0]),
+                (transformed_images.shape[0]),
                 device=config.discriminator.device,
                 dtype=config.discriminator.dtype,
             ),
         )
         random_mixes_ratios = torch.rand(
-            (batch[0].shape[0],),
+            (transformed_images.shape[0], 1, 1, 1),
             device=config.discriminator.device,
             dtype=config.discriminator.dtype,
         )
         random_mixes = (
             random_mixes_ratios * batch[1]
-            + (1 - random_mixes_ratios) * transformed_images[0]
+            + (1 - random_mixes_ratios) * transformed_images
         )
         mixed_discriminator_loss = discriminator(
-            random_mixes,
-            random_mixes_ratios,
+            torch.cat([batch[0], random_mixes], dim=1),
+            random_mixes_ratios.squeeze(3).squeeze(2).squeeze(1),
         )
-        loss = (
+        discriminator_loss = (
             transformed_discriminator_loss
             + deepdream_discriminator_loss
             + mixed_discriminator_loss
         )
-        for param_group in optimizer.param_groups:
+        for param_group in discriminator_optimizer.param_groups:
             param_group["lr"] = config.optimizer.get_lr(step)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        train_losses[step % config.eval_interval] = loss.item()
+        for param_group in generator_optimizer.param_groups:
+            param_group["lr"] = config.optimizer.get_lr(step)
+        discriminator_optimizer.zero_grad()
+        discriminator_loss.backward(retain_graph=True)
+        discriminator_optimizer.step()
+        generator_optimizer.zero_grad()
+        generator_loss.backward()
+        generator_optimizer.step()
+        train_generator_losses[step % config.eval_interval] = generator_loss.item()
+        train_discriminator_losses[
+            step % config.eval_interval
+        ] = discriminator_loss.item()
         if step % config.log_interval == 0:
-            print(f"Step {step} train loss: {loss.item()}")
+            print(
+                f"Step {step}, generator_loss: {generator_loss.item()}, discriminator_loss: {discriminator_loss.item()}"
+            )
 
     return 0
 

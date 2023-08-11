@@ -11,7 +11,6 @@ class DiscriminatorConf:
     n_blocks: int
     n_layers_per_block: int
     n_first_block_channels: int
-    init_std: float
     _activation: str
     device: str
     _dtype: str

@@ -157,6 +157,6 @@ class Resnet50DeepdreamDataset(
         origin_img = Image.open(origin_file)
         processed_img = Image.open(processed_file)
         # Convert to tensors
-        origin_img_tensor = self.transform(origin_img)
-        processed_img_tensor = self.transform(processed_img)
+        origin_img_tensor = self.transform(origin_img) * 2 - 1
+        processed_img_tensor = self.transform(processed_img) * 2 - 1
         return origin_img_tensor, processed_img_tensor

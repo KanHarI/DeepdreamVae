@@ -1,4 +1,5 @@
 import dataclasses
+import random
 from typing import Callable
 
 import torch
@@ -25,7 +26,8 @@ class Discriminator(torch.nn.Module):
         super().__init__()
         self.config = config
         self.color_to_channels = torch.zeros(
-            (3, config.n_first_block_channels),
+            # 6 - input image RGB, transformed image RGB
+            (6, config.n_first_block_channels),
             device=config.device,
             dtype=config.dtype,
             requires_grad=True,
@@ -66,15 +68,16 @@ class Discriminator(torch.nn.Module):
             block.init_weights()
         torch.nn.init.normal_(self.estimator, std=self.config.init_std)
 
-    def estimate_image(self, x: torch.Tensor) -> torch.Tensor:
+    def estimate_is_image_deepdream(self, x: torch.Tensor) -> torch.Tensor:
         x = torch.einsum("lc,...lhw->...chw", self.color_to_channels, x)
         for block in self.encoder_blocks:
             x = block(x)
+            x = torch.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
         x = torch.einsum("chw,bchw->b", self.estimator, x)
         x = torch.sigmoid(x)
         return x
 
     def forward(self, x: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        x = self.estimate_image(x)
+        x = self.estimate_is_image_deepdream(x)
         loss = -torch.log(torch.abs(x - targets) + self.config.loss_eps)
         return loss.mean()

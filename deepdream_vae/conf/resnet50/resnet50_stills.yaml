@@ -1,6 +1,6 @@
 unet:
   n_blocks: 4
-  n_layers_per_block: 3
+  n_layers_per_block: 4
   n_first_block_channels: 8
   _activation: "new_gelu"
   ln_eps: 1e-5
@@ -8,32 +8,32 @@ unet:
   _dtype: "float16"
 
 discriminator:
-  n_blocks: 4
-  n_layers_per_block: 3
+  n_blocks: 5
+  n_layers_per_block: 4
   n_first_block_channels: 8
   _activation: "new_gelu"
   ln_eps: 1e-5
   device: "cuda"
   _dtype: "float16"
-  loss_eps: 1e-4
+  loss_eps: 1e-5
 
 optimizer:
   _optimizer: "adamw"
-  lr: 1e-4
+  lr: 2e-5  # Low LR is necessary for stability
   weight_decay: 5e-2
   lr_schedule: "invsqrt"
   adam_eps: 1e-4
   beta1: 0.9
-  beta2: 0.999
+  beta2: 0.99  # Lower than for transformers... Dataset shifts under the networks
   warmup_iters: 1_000
   max_iters: 50_000
   init_std: 2e-2
-  batch_size: 16
+  batch_size: 8
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
 processed_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/data/out-images/RESNET50_IMAGENET/"
 eval_interval: 200
-eval_iters: 25
+eval_iters: 50
 log_interval: 10
 wandb_log: true
 wandb_run_name: "first-run"
