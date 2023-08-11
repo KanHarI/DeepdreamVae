@@ -16,6 +16,7 @@ class OptimizerConf:
     warmup_iters: int
     max_iters: int
     init_std: float
+    batch_size: int
 
     def create_optimizer(self, params: Any) -> torch.optim.Optimizer:
         match self._optimizer:
