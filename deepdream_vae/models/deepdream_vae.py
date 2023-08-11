@@ -3,7 +3,7 @@ from typing import Callable
 
 import torch
 
-from deepdream_vae.deepdream_vae_block import DeepdreamVAEBlock, DeepdreamVAEBlockConfig
+from deepdream_vae.models.deepdream_vae_block import DeepdreamVAEBlock, DeepdreamVAEBlockConfig
 
 
 @dataclasses.dataclass

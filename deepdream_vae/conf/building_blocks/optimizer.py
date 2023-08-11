@@ -15,8 +15,9 @@ class OptimizerConf:
     beta2: float
     warmup_iters: int
     max_iters: int
+    init_std: float
 
-    def create_optimizer(self, params: Any) -> torch.optim.optimizer.Optimizer:
+    def create_optimizer(self, params: Any) -> torch.optim.Optimizer:
         match self._optimizer:
             case "adamw":
                 return torch.optim.AdamW(
