@@ -227,6 +227,15 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                             "lr": config.optimizer.get_lr(step),
                             "noise_volume": noise_volume,
                             "noise_volume_std": noise_volume_std,
+                            "input_image": wandb.Image(
+                                Image.fromarray(sample_input_image)
+                            ),
+                            "deepdream_image": wandb.Image(
+                                Image.fromarray(sample_deepdream_image)
+                            ),
+                            "output_image": wandb.Image(
+                                Image.fromarray(sample_output_image)
+                            ),
                         },
                         step=step,
                     )
