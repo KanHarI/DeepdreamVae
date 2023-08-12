@@ -12,6 +12,7 @@ setup(
         "einops",
         "hydra-core",
         "numpy",
+        "Pillow",
         "torch",
         "torchaudio",
         "torchvision",
