@@ -16,6 +16,7 @@ class DiscriminatorConf:
     _dtype: str
     ln_eps: float
     loss_eps: float
+    discriminator_cheat_loss: float
 
     @property
     def activation(self) -> Callable[[torch.Tensor], torch.Tensor]:

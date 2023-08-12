@@ -1,5 +1,5 @@
 import dataclasses
-import random
+import typing
 from typing import Callable
 
 import torch
@@ -19,6 +19,7 @@ class DiscriminatorConfig:
     ln_eps: float
     image_size: int
     loss_eps: float
+    discriminator_cheat_loss: float
 
 
 class Discriminator(torch.nn.Module):
@@ -68,16 +69,22 @@ class Discriminator(torch.nn.Module):
             block.init_weights()
         torch.nn.init.normal_(self.estimator, std=self.config.init_std)
 
-    def estimate_is_image_deepdream(self, x: torch.Tensor) -> torch.Tensor:
+    def estimate_is_image_deepdream(
+        self, x: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         x = torch.einsum("lc,...lhw->...chw", self.color_to_channels, x)
         for block in self.encoder_blocks:
             x = block(x)
             x = torch.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
         x = torch.einsum("chw,bchw->b", self.estimator, x)
-        x = torch.sigmoid(x)
-        return x
+        logits = torch.sigmoid(x)
+        return logits, x
 
     def forward(self, x: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
-        x = self.estimate_is_image_deepdream(x)
-        loss = -torch.log(torch.abs(x - targets) + self.config.loss_eps)
-        return loss.mean()
+        logits, x = self.estimate_is_image_deepdream(x)
+        loss = (
+            -targets * torch.log(logits + self.config.loss_eps)
+            - (1 - targets) * torch.log(1 - logits + self.config.loss_eps)
+            - (targets * 2 - 1) * x * self.config.discriminator_cheat_loss  # Rescue us when we're stuck
+        )
+        return typing.cast(torch.Tensor, loss.mean())

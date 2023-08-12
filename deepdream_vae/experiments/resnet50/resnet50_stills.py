@@ -87,6 +87,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         ln_eps=config.discriminator.ln_eps,
         image_size=config.image_size,
         loss_eps=config.discriminator.loss_eps,
+        discriminator_cheat_loss=config.discriminator.discriminator_cheat_loss,
     )
     discriminator = Discriminator(discriminator_config)
     discriminator.init_weights()
@@ -292,7 +293,9 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         for param_group in generator_optimizer.param_groups:
             param_group["lr"] = config.optimizer.get_lr(step)
         discriminator_optimizer.zero_grad()
-        (discriminator_loss * config.discriminator_loss_multiplier).backward(retain_graph=True)
+        (discriminator_loss * config.discriminator_loss_multiplier).backward(
+            retain_graph=True
+        )
         discriminator_optimizer.step()
         generator_optimizer.zero_grad()
         (generator_loss * config.generator_loss_multiplier).backward()

@@ -16,6 +16,7 @@ discriminator:
   device: "cuda"
   _dtype: "float16"
   loss_eps: 1e-5
+  discriminator_cheat_loss: 1e-4
 
 optimizer:
   _optimizer: "adamw"
