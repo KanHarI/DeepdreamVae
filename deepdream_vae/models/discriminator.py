@@ -5,6 +5,7 @@ from typing import Callable
 import torch
 
 from deepdream_vae.models.block import Block, BlockConfig
+from deepdream_vae.utils.inv_sigmoid import inv_sigmoid
 
 
 @dataclasses.dataclass
@@ -20,7 +21,6 @@ class DiscriminatorConfig:
     image_size: int
     loss_eps: float
     discriminator_cheat_loss: float
-    discriminator_cheat_factor: float
 
 
 class Discriminator(torch.nn.Module):
@@ -86,7 +86,7 @@ class Discriminator(torch.nn.Module):
         loss_if_positive = -torch.log(logits + self.config.loss_eps)
         loss_if_negative = -torch.log(1 - logits + self.config.loss_eps)
         cheat_loss = (
-            (targets * 2 - 1) * self.config.discriminator_cheat_factor - x
+            inv_sigmoid(targets) - x
         ) ** 2 * self.config.discriminator_cheat_loss
         loss = (
             loss_if_positive * targets + loss_if_negative * (1 - targets) + cheat_loss
