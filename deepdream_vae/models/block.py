@@ -64,6 +64,7 @@ class Block(torch.nn.Module):
             device=self.config.device,
             dtype=self.config.dtype,
         )
+        # Add the min of the input and output channels as skip connections
         tmp[:, : self.config.n_channels_in, :, :] = x[
             :, : self.config.n_channels_out, :, :
         ]

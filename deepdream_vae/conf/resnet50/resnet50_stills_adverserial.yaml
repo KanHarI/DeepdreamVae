@@ -18,7 +18,7 @@ discriminator:
   _dtype: "float16"
   loss_eps: 1e-5
   discriminator_cheat_loss: 1e-1
-  cheat_loss_eps: 1e-2  # Do not set too low!
+  cheat_loss_eps: 2e-3  # Lower value = stronger gradient around generator, but more unstable training.
 
 optimizer:
   _optimizer: "adamw"
@@ -30,7 +30,7 @@ optimizer:
   beta2: 0.995
   warmup_iters: 10_000
   max_iters: 100_000
-  init_std: 2e-2  # High init std works well for some reason after the first ~100 iters
+  init_std: 2e-2
   batch_size: 12
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"

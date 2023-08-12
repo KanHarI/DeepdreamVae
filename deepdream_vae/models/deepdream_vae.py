@@ -150,6 +150,8 @@ class DeepdreamVAE(torch.nn.Module):
             x = torch.cat([skipped.pop(), x], dim=1) / 2
             x = decoder_block(x)
         x = self.final_block(torch.cat([skipped.pop(), x], dim=1))
+        # Using the same layer for color-> channels and channels -> color
+        # results in much faster initial convergence.
         x = torch.einsum("lc,...chw->...lhw", self.channels_expander, x)
         return x
 
