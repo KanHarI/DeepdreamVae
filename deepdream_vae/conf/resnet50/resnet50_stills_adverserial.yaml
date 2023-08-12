@@ -10,8 +10,8 @@ unet:
 
 discriminator:
   n_blocks: 5
-  n_layers_per_block: 4
-  n_first_block_channels: 32
+  n_layers_per_block: 5
+  n_first_block_channels: 48
   _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
