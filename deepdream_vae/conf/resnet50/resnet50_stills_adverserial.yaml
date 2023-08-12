@@ -18,6 +18,7 @@ discriminator:
   _dtype: "float16"
   loss_eps: 1e-5
   discriminator_cheat_loss: 1e-1
+  cheat_loss_eps: 1e-1  # Do not set too low!
 
 optimizer:
   _optimizer: "adamw"

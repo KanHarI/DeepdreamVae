@@ -21,6 +21,7 @@ class DiscriminatorConfig:
     image_size: int
     loss_eps: float
     discriminator_cheat_loss: float
+    cheat_loss_eps: float
 
 
 class Discriminator(torch.nn.Module):
@@ -86,7 +87,11 @@ class Discriminator(torch.nn.Module):
         loss_if_positive = -torch.log(logits + self.config.loss_eps)
         loss_if_negative = -torch.log(1 - logits + self.config.loss_eps)
         cheat_loss = (
-            inv_sigmoid(0.1 + targets * 0.8) - x
+            inv_sigmoid(
+                self.config.cheat_loss_eps
+                + targets * (1 - 2 * self.config.cheat_loss_eps)
+            )
+            - x
         ) ** 2 * self.config.discriminator_cheat_loss
         loss = (
             loss_if_positive * targets + loss_if_negative * (1 - targets) + cheat_loss

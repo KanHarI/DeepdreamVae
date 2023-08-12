@@ -96,6 +96,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         image_size=config.image_size,
         loss_eps=config.discriminator.loss_eps,
         discriminator_cheat_loss=config.discriminator.discriminator_cheat_loss,
+        cheat_loss_eps=config.discriminator.cheat_loss_eps,
     )
     discriminator = Discriminator(discriminator_config)
     discriminator.init_weights()
