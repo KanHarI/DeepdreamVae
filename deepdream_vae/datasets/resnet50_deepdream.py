@@ -125,11 +125,18 @@ class Resnet50DeepdreamDataset(
             image.size[0] < self.config.image_size
             or image.size[1] < self.config.image_size
         ):
-            factor_x = max(1, self.config.image_size // image.size[0] + 1)
-            factor_y = max(1, self.config.image_size // image.size[1] + 1)
-            image = image.crop(
-                (0, 0, image.size[0] * factor_x, image.size[1] * factor_y)
+            # Tile
+            new_image = Image.new(
+                image.mode,
+                (
+                    max(image.size[0], self.config.image_size),
+                    max(image.size[1], self.config.image_size),
+                ),
             )
+            for i in range(0, new_image.size[0], image.size[0]):
+                for j in range(0, new_image.size[1], image.size[1]):
+                    new_image.paste(image, (i, j))
+            return new_image
         return image
 
     def scale_images(self, img: Image.Image) -> Image.Image:
@@ -167,6 +174,15 @@ class Resnet50DeepdreamDataset(
         origin_img = Image.open(origin_file)
         processed_img = Image.open(processed_file)
         # Convert to tensors
+        manual_seed = torch.randint(0, 2**32, (1,)).item()
+        # Mix seed with first 32 bits of sha256 of origin_file_name and with the index
+        manual_seed += int(
+            hashlib.sha256(origin_file_name.encode()).hexdigest()[:8], 16
+        )
+        manual_seed += index
+        manual_seed %= 2 ** 32
+        torch.manual_seed(manual_seed)
         origin_img_tensor = self.transform(origin_img) * 2 - 1
+        torch.manual_seed(manual_seed)
         processed_img_tensor = self.transform(processed_img) * 2 - 1
         return origin_img_tensor, processed_img_tensor

@@ -1,7 +1,7 @@
 unet:
-  n_blocks: 4
-  n_layers_per_block: 5
-  n_first_block_channels: 64
+  n_blocks: 5
+  n_layers_per_block: 6
+  n_first_block_channels: 48
   _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
@@ -9,9 +9,9 @@ unet:
   noise_proj_init_std_factor: 1e-2
 
 discriminator:
-  n_blocks: 5
-  n_layers_per_block: 5
-  n_first_block_channels: 48
+  n_blocks: 6
+  n_layers_per_block: 4
+  n_first_block_channels: 32
   _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
@@ -28,18 +28,18 @@ optimizer:
   adam_eps: 1e-4
   beta1: 0.9
   beta2: 0.995
-  warmup_iters: 1_000
+  warmup_iters: 2_000
   max_iters: 100_000
   init_std: 2e-2  # High init std works well for some reason after the first ~100 iters
-  batch_size: 12
+  batch_size: 6
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
 processed_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/data/out-images/RESNET50_IMAGENET/"
 eval_interval: 100
-eval_iters: 10
+eval_iters: 20
 log_interval: 10
 wandb_log: true
-wandb_run_name: "cheat-loss-adversarial-run"
+wandb_run_name: "cheat-loss-large-adversarial-run"
 compile_model: false
 image_size: 64
 discriminator_deepdream_loss_factor: 0.2
@@ -47,4 +47,4 @@ discriminator_generated_loss_factor: 0.2
 discriminator_mixed_loss_factor: 0.6
 generator_lr_multiplier: 1.0
 discriminator_lr_multiplier: 1.0
-scale_factor: 8
+scale_factor: 4
