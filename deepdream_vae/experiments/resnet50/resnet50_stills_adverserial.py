@@ -166,10 +166,13 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                             dtype=config.discriminator.dtype,
                         ),
                     )
-                    random_mixes_ratios = torch.rand(
-                        (transformed_images.shape[0], 1, 1, 1),
-                        device=config.discriminator.device,
-                        dtype=config.discriminator.dtype,
+                    random_mixes_ratios = (
+                        torch.rand(
+                            (transformed_images.shape[0], 1, 1, 1),
+                            device=config.discriminator.device,
+                            dtype=config.discriminator.dtype,
+                        )
+                        ** config.mixer_gamma
                     )
                     random_mixes = batch[
                         1
@@ -285,10 +288,13 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 dtype=config.discriminator.dtype,
             ),
         )
-        random_mixes_ratios = torch.rand(
-            (transformed_images.shape[0], 1, 1, 1),
-            device=config.discriminator.device,
-            dtype=config.discriminator.dtype,
+        random_mixes_ratios = (
+            torch.rand(
+                (transformed_images.shape[0], 1, 1, 1),
+                device=config.discriminator.device,
+                dtype=config.discriminator.dtype,
+            )
+            ** config.mixer_gamma
         )
         random_mixes = (
             random_mixes_ratios * batch[1]

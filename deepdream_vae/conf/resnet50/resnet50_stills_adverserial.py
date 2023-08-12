@@ -25,3 +25,4 @@ class Resnet50StillsExperimentConf:
     generator_lr_multiplier: float
     discriminator_lr_multiplier: float
     scale_factor: int
+    mixer_gamma: float

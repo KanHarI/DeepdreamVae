@@ -39,7 +39,7 @@ eval_interval: 100
 eval_iters: 20
 log_interval: 10
 wandb_log: true
-wandb_run_name: "cheat-loss-64size-run"
+wandb_run_name: "high-gamma-run"
 compile_model: false
 image_size: 64
 discriminator_deepdream_loss_factor: 0.2
@@ -48,3 +48,5 @@ discriminator_mixed_loss_factor: 0.6
 generator_lr_multiplier: 1.0
 discriminator_lr_multiplier: 1.0
 scale_factor: 8
+mixer_gamma: 3.0  # Higher = more samples near the generator, less around reference.
+  # Useful for creating better gradients around the generated image.
