@@ -57,14 +57,7 @@ class OptimizerConf:
                     return self.lr * step / self.warmup_iters
                 else:
                     return typing.cast(
-                        float,
-                        self.lr
-                        * (
-                            1.0
-                            - (step - self.warmup_iters)
-                            / (self.max_iters - self.warmup_iters)
-                        )
-                        ** 0.5,
+                        float, self.lr / ((step / self.warmup_iters) ** 0.5)
                     )
             case _:
                 raise ValueError(f"Unknown lr schedule: {self.lr_schedule}")
