@@ -286,18 +286,20 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
             random_mixes_ratios.squeeze(3).squeeze(2).squeeze(1),
         )
         discriminator_loss = (
-            transformed_discriminator_loss
-            + deepdream_discriminator_loss
-            + mixed_discriminator_loss
+            transformed_discriminator_loss * config.discriminator_generated_loss_factor
+            + deepdream_discriminator_loss * config.discriminator_deepdream_loss_factor
+            + mixed_discriminator_loss * config.discriminator_mixed_loss_factor
         )
         for param_group in discriminator_optimizer.param_groups:
-            param_group["lr"] = config.optimizer.get_lr(step) * config.discriminator_lr_multiplier
+            param_group["lr"] = (
+                config.optimizer.get_lr(step) * config.discriminator_lr_multiplier
+            )
         for param_group in generator_optimizer.param_groups:
-            param_group["lr"] = config.optimizer.get_lr(step) * config.generator_lr_multiplier
+            param_group["lr"] = (
+                config.optimizer.get_lr(step) * config.generator_lr_multiplier
+            )
         discriminator_optimizer.zero_grad()
-        discriminator_loss.backward(
-            retain_graph=True
-        )
+        discriminator_loss.backward(retain_graph=True)
         discriminator_optimizer.step()
         generator_optimizer.zero_grad()
         generator_loss.backward()

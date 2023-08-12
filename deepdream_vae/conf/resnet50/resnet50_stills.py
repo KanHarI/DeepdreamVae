@@ -19,6 +19,9 @@ class Resnet50StillsExperimentConf:
     wandb_run_name: str
     compile_model: bool
     image_size: int
+    discriminator_deepdream_loss_factor: float
+    discriminator_generated_loss_factor: float
+    discriminator_mixed_loss_factor: float
     generator_lr_multiplier: float
     discriminator_lr_multiplier: float
     scale_factor: int
