@@ -26,3 +26,4 @@ class Resnet50StillsExperimentConf:
     discriminator_lr_multiplier: float
     scale_factor: int
     mixer_gamma: float
+    save_interval: int

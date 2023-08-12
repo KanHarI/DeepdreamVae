@@ -50,3 +50,4 @@ discriminator_lr_multiplier: 1.0
 scale_factor: 8
 mixer_gamma: 2.0  # Higher = more samples near the generator, less around reference.
   # Useful for creating better gradients around the generated image.
+save_interval: 5000

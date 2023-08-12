@@ -121,22 +121,34 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
     train_generator_losses += float("inf")
     train_discriminator_losses += float("inf")
     for step in range(config.optimizer.max_iters):
-        eval_generator_losses = torch.zeros(
-            (config.eval_iters), device="cpu", dtype=torch.float32
-        )
-        eval_discriminator_losses = torch.zeros(
-            (config.eval_iters), device="cpu", dtype=torch.float32
-        )
-        eval_transformed_discriminator_losses = torch.zeros(
-            (config.eval_iters), device="cpu", dtype=torch.float32
-        )
-        eval_deepdream_discriminator_losses = torch.zeros(
-            (config.eval_iters), device="cpu", dtype=torch.float32
-        )
-        eval_mixed_losses = torch.zeros(
-            (config.eval_iters), device="cpu", dtype=torch.float32
-        )
+        if step % config.save_interval == 0:
+            models_dir = f"outputs/{config.wandb_run_name}/models"
+            if not os.path.exists(models_dir):
+                os.makedirs(models_dir)
+            torch.save(
+                generative_model.state_dict(),
+                f"{models_dir}/generative_model_{step}.pth",
+            )
+            torch.save(
+                discriminator.state_dict(),
+                f"{models_dir}/discriminator_{step}.pth",
+            )
         if step % config.eval_interval == 0:
+            eval_generator_losses = torch.zeros(
+                (config.eval_iters,), device="cpu", dtype=torch.float32
+            )
+            eval_discriminator_losses = torch.zeros(
+                (config.eval_iters,), device="cpu", dtype=torch.float32
+            )
+            eval_transformed_discriminator_losses = torch.zeros(
+                (config.eval_iters,), device="cpu", dtype=torch.float32
+            )
+            eval_deepdream_discriminator_losses = torch.zeros(
+                (config.eval_iters,), device="cpu", dtype=torch.float32
+            )
+            eval_mixed_losses = torch.zeros(
+                (config.eval_iters,), device="cpu", dtype=torch.float32
+            )
             generative_model.eval()
             discriminator.eval()
             with torch.no_grad():
