@@ -1,24 +1,13 @@
 unet:
   n_blocks: 4
   n_layers_per_block: 5
-  n_first_block_channels: 128
-  _activation: "new_gelu"
-  ln_eps: 1e-4
-  device: "cuda"
-  _dtype: "float16"
-  noise_proj_init_std_factor: 1e-2
-
-discriminator:
-  n_blocks: 5
-  n_layers_per_block: 5
   n_first_block_channels: 64
   _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
-  _dtype: "float16"
-  loss_eps: 1e-5
-  discriminator_cheat_loss: 1e-1
-  discriminator_cheat_factor: 5.0
+  _dtype: "float32"
+  noise_proj_init_std_factor: 1e-2
+
 
 optimizer:
   _optimizer: "adamw"
@@ -26,12 +15,12 @@ optimizer:
   weight_decay: 5e-2
   lr_schedule: "invsqrt"
   adam_eps: 1e-4
-  beta1: 0.85
-  beta2: 0.99
+  beta1: 0.9
+  beta2: 0.999
   warmup_iters: 1_000
   max_iters: 100_000
-  init_std: 5e-3
-  batch_size: 4
+  init_std: 1e-1
+  batch_size: 24
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
 processed_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/data/out-images/RESNET50_IMAGENET/"
@@ -39,12 +28,7 @@ eval_interval: 100
 eval_iters: 10
 log_interval: 10
 wandb_log: true
-wandb_run_name: "adversarial-run"
+wandb_run_name: "supervised-run"
 compile_model: false
 image_size: 64
-discriminator_deepdream_loss_factor: 0.2
-discriminator_generated_loss_factor: 0.2
-discriminator_mixed_loss_factor: 0.6
-generator_lr_multiplier: 1.0
-discriminator_lr_multiplier: 1.0
 scale_factor: 4

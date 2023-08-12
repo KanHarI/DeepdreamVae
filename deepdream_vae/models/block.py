@@ -64,7 +64,9 @@ class Block(torch.nn.Module):
             device=self.config.device,
             dtype=self.config.dtype,
         )
-        tmp[:, : self.config.n_channels_in, :, :] = x[:, : self.config.n_channels_out, :, :]
+        tmp[:, : self.config.n_channels_in, :, :] = x[
+            :, : self.config.n_channels_out, :, :
+        ]
         x = tmp
         for j, conv_layer in enumerate(self.conv_layers):
             x = x + self.activation(conv_layer(self.layer_norms[j](x)))

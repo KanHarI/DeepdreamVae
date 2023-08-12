@@ -1,3 +1,4 @@
+import os
 import sys
 from typing import Any
 
@@ -202,9 +203,17 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 sample_input_image = (sample_input_image * 255).astype(np.uint8)
                 sample_deepdream_image = (sample_deepdream_image * 255).astype(np.uint8)
                 sample_output_image = (sample_output_image * 255).astype(np.uint8)
-                input_save_path = f"outputs/sample_input_{step}.jpg"
-                deepdream_save_path = f"outputs/sample_deepdream_{step}.jpg"
-                output_save_path = f"outputs/sample_output_{step}.jpg"
+                if not os.path.exists("outputs/" + config.wandb_run_name):
+                    os.makedirs("outputs/" + config.wandb_run_name)
+                input_save_path = (
+                    f"outputs/{config.wandb_run_name}/sample_input_{step}.jpg"
+                )
+                deepdream_save_path = (
+                    f"outputs/{config.wandb_run_name}/sample_deepdream_{step}.jpg"
+                )
+                output_save_path = (
+                    f"outputs/{config.wandb_run_name}/sample_output_{step}.jpg"
+                )
                 print(f"Saving sample output image to {output_save_path}")
                 input_image_to_save = Image.fromarray(sample_input_image)
                 deepdream_image_to_save = Image.fromarray(sample_deepdream_image)

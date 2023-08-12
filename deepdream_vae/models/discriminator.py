@@ -85,8 +85,12 @@ class Discriminator(torch.nn.Module):
         logits, x = self.estimate_is_image_deepdream(x)
         loss_if_positive = -torch.log(logits + self.config.loss_eps)
         loss_if_negative = -torch.log(1 - logits + self.config.loss_eps)
-        cheat_loss = ((targets * 2 - 1) * self.config.discriminator_cheat_factor - x) ** 2 * self.config.discriminator_cheat_loss
-        loss = (loss_if_positive * targets + loss_if_negative * (1 - targets) + cheat_loss).mean()
+        cheat_loss = (
+            (targets * 2 - 1) * self.config.discriminator_cheat_factor - x
+        ) ** 2 * self.config.discriminator_cheat_loss
+        loss = (
+            loss_if_positive * targets + loss_if_negative * (1 - targets) + cheat_loss
+        ).mean()
         # loss = (
         #     -targets * torch.log(logits + self.config.loss_eps)
         #     - (1 - targets) * torch.log(1 - logits + self.config.loss_eps)
