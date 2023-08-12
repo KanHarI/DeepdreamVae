@@ -40,6 +40,6 @@ wandb_log: false
 wandb_run_name: "first-run"
 compile_model: false
 image_size: 64
-generator_loss_multiplier: 3.0
-discriminator_loss_multiplier: 1.0
+generator_lr_multiplier: 3.0
+discriminator_lr_multiplier: 0.05
 scale_factor: 4

@@ -291,16 +291,16 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
             + mixed_discriminator_loss
         )
         for param_group in discriminator_optimizer.param_groups:
-            param_group["lr"] = config.optimizer.get_lr(step)
+            param_group["lr"] = config.optimizer.get_lr(step) * config.discriminator_lr_multiplier
         for param_group in generator_optimizer.param_groups:
-            param_group["lr"] = config.optimizer.get_lr(step)
+            param_group["lr"] = config.optimizer.get_lr(step) * config.generator_lr_multiplier
         discriminator_optimizer.zero_grad()
-        (discriminator_loss * config.discriminator_loss_multiplier).backward(
+        discriminator_loss.backward(
             retain_graph=True
         )
         discriminator_optimizer.step()
         generator_optimizer.zero_grad()
-        (generator_loss * config.generator_loss_multiplier).backward()
+        generator_loss.backward()
         generator_optimizer.step()
         train_generator_losses[step % config.eval_interval] = generator_loss.item()
         train_discriminator_losses[

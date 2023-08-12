@@ -19,6 +19,6 @@ class Resnet50StillsExperimentConf:
     wandb_run_name: str
     compile_model: bool
     image_size: int
-    generator_loss_multiplier: float
-    discriminator_loss_multiplier: float
+    generator_lr_multiplier: float
+    discriminator_lr_multiplier: float
     scale_factor: int
