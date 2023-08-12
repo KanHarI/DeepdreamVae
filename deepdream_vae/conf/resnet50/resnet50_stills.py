@@ -21,3 +21,4 @@ class Resnet50StillsExperimentConf:
     image_size: int
     generator_loss_multiplier: float
     discriminator_loss_multiplier: float
+    scale_factor: int

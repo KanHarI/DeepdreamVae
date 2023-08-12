@@ -29,7 +29,7 @@ optimizer:
   warmup_iters: 2_000
   max_iters: 100_000
   init_std: 2e-2
-  batch_size: 8
+  batch_size: 24
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
 processed_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/data/out-images/RESNET50_IMAGENET/"
@@ -39,6 +39,7 @@ log_interval: 10
 wandb_log: false
 wandb_run_name: "first-run"
 compile_model: false
-image_size: 256
+image_size: 64
 generator_loss_multiplier: 3.0
 discriminator_loss_multiplier: 1.0
+scale_factor: 4

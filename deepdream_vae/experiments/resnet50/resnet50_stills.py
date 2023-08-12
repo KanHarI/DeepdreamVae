@@ -38,12 +38,14 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         origin_path=config.source_files_path,
         is_train=True,
         image_size=config.image_size,
+        scale_factor=config.scale_factor,
     )
     test_dataset_conf = Resnet50DeepdreamDatasetConfig(
         processed_path=config.processed_files_path,
         origin_path=config.source_files_path,
         is_train=False,
         image_size=config.image_size,
+        scale_factor=config.scale_factor,
     )
     train_dataset = Resnet50DeepdreamDataset(train_dataset_conf)
     test_dataset = Resnet50DeepdreamDataset(test_dataset_conf)

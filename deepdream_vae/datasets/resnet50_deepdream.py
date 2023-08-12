@@ -14,6 +14,7 @@ class Resnet50DeepdreamDatasetConfig:
     origin_path: str
     is_train: bool
     image_size: int
+    scale_factor: int
 
 
 # 0--Parade            14--Traffic         19--Couple        23--Shoppers          28--Sports_Fan           32--Worker_Laborer  37--Soccer       41--Swimming    46--Jockey                   50--Celebration_Or_Party  55--Sports_Coach_Trainer  5--Car_Accident      9--Press_Conference
@@ -86,6 +87,7 @@ class Resnet50DeepdreamDataset(
             )
         self.transform = transforms.Compose(
             [
+                transforms.Lambda(self.scale_images),
                 self.tile_small_images,
                 transforms.RandomCrop(self.config.image_size),
                 transforms.RandomHorizontalFlip(),
@@ -129,6 +131,14 @@ class Resnet50DeepdreamDataset(
                 (0, 0, image.size[0] * factor_x, image.size[1] * factor_y)
             )
         return image
+
+    def scale_images(self, img: Image.Image) -> Image.Image:
+        return img.resize(
+            (
+                img.size[0] // self.config.scale_factor,
+                img.size[1] // self.config.scale_factor,
+            )
+        )
 
     def __len__(self) -> int:
         return len(self.processed_files)
