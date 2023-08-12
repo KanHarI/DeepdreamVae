@@ -304,13 +304,13 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         generator_optimizer.zero_grad()
         generator_loss.backward()
         generator_optimizer.step()
-        train_generator_losses[step % config.eval_interval] = generator_loss.item()
+        train_generator_losses[step % config.eval_interval] = generator_loss.detach()
         train_discriminator_losses[
             step % config.eval_interval
-        ] = discriminator_loss.item()
+        ] = discriminator_loss.detach()
         if step % config.log_interval == 0:
             print(
-                f"Step {step}, generator_loss: {generator_loss.item()}, discriminator_loss: {discriminator_loss.item()}"
+                f"Step {step}, generator_loss: {generator_loss.detach()}, discriminator_loss: {discriminator_loss.detach()}"
             )
 
     return 0
