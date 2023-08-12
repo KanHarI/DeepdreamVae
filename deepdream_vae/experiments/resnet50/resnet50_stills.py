@@ -207,6 +207,8 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 deepdream_image_to_save.save(deepdream_save_path)
                 output_image_to_save = Image.fromarray(sample_output_image)
                 output_image_to_save.save(output_save_path)
+                noise_volume = generative_model.noise_volume.mean().item()
+                noise_volume_std = generative_model.noise_volume.std().item()
                 # Log eval metrics to wandb
                 if config.wandb_log:
                     wandb.log(
@@ -223,14 +225,16 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                             "train_discriminator_loss": train_discriminator_losses.mean().item(),
                             "train_discriminator_loss_std": train_discriminator_losses.std().item(),
                             "lr": config.optimizer.get_lr(step),
+                            "noise_volume": noise_volume,
+                            "noise_volume_std": noise_volume_std,
                         },
                         step=step,
                     )
                 # Print eval metrics
                 print(
-                    f"Step {step}: eval_generator_loss: {eval_generator_losses.mean().item()}, eval_discriminator_loss: {eval_discriminator_losses.mean().item()}, eval_transformed_discriminator_loss: {eval_transformed_discriminator_losses.mean().item()}, eval_deepdream_discriminator_loss: {eval_deepdream_discriminator_losses.mean().item()}, eval_mixed_discriminator_loss: {eval_mixed_losses.mean().item()}"
-                    f"train_generator_loss: {train_generator_losses.mean().item()}, train_discriminator_loss: {train_discriminator_losses.mean().item()}"
-                    f"lr: {config.optimizer.get_lr(step)}"
+                    f"Step {step}: eval_generator_loss: {eval_generator_losses.mean().item()}, eval_discriminator_loss: {eval_discriminator_losses.mean().item()}, eval_transformed_discriminator_loss: {eval_transformed_discriminator_losses.mean().item()}, eval_deepdream_discriminator_loss: {eval_deepdream_discriminator_losses.mean().item()}, eval_mixed_discriminator_loss: {eval_mixed_losses.mean().item()}\n"
+                    f"train_generator_loss: {train_generator_losses.mean().item()}, train_discriminator_loss: {train_discriminator_losses.mean().item()}\n"
+                    f"lr: {config.optimizer.get_lr(step)}, noise_volume: {noise_volume}, noise_volume_std: {noise_volume_std}"
                 )
             generative_model.train()
             discriminator.train()
@@ -279,10 +283,10 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         for param_group in generator_optimizer.param_groups:
             param_group["lr"] = config.optimizer.get_lr(step)
         discriminator_optimizer.zero_grad()
-        discriminator_loss.backward(retain_graph=True)
+        (discriminator_loss * config.discriminator_loss_multiplier).backward(retain_graph=True)
         discriminator_optimizer.step()
         generator_optimizer.zero_grad()
-        generator_loss.backward()
+        (generator_loss * config.generator_loss_multiplier).backward()
         generator_optimizer.step()
         train_generator_losses[step % config.eval_interval] = generator_loss.item()
         train_discriminator_losses[

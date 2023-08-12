@@ -24,10 +24,10 @@ optimizer:
   lr_schedule: "invsqrt"
   adam_eps: 1e-4
   beta1: 0.9
-  beta2: 0.99  # Lower than for transformers... Distribution shifts under the networks
+  beta2: 0.995
   warmup_iters: 1_000
   max_iters: 50_000
-  init_std: 5e-3  # Low init_std works well
+  init_std: 2e-2
   batch_size: 8
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
@@ -39,3 +39,5 @@ wandb_log: true
 wandb_run_name: "first-run"
 compile_model: false
 image_size: 256
+generator_loss_multiplier: 3.0
+discriminator_loss_multiplier: 1.0
