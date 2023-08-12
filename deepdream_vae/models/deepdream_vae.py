@@ -147,9 +147,9 @@ class DeepdreamVAE(torch.nn.Module):
         ).unsqueeze(-1).unsqueeze(-1)
         for j, decoder_block in enumerate(self.decoders_blocks):
             x = torch.nn.functional.interpolate(x, scale_factor=2, mode="nearest")
-            x = torch.cat([x, skipped.pop()], dim=1) / 2
+            x = torch.cat([skipped.pop(), x], dim=1) / 2
             x = decoder_block(x)
-        x = self.final_block(torch.cat([x, skipped.pop()], dim=1))
+        x = self.final_block(torch.cat([skipped.pop(), x], dim=1))
         x = torch.einsum("lc,...chw->...lhw", self.channels_expander, x)
         return x
 
