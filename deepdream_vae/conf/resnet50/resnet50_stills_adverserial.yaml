@@ -18,7 +18,7 @@ discriminator:
   _dtype: "float16"
   loss_eps: 1e-5
   discriminator_cheat_loss: 1e-1
-  cheat_loss_eps: 1e-1  # Do not set too low!
+  cheat_loss_eps: 1e-2  # Do not set too low!
 
 optimizer:
   _optimizer: "adamw"
@@ -39,7 +39,7 @@ eval_interval: 100
 eval_iters: 10
 log_interval: 10
 wandb_log: true
-wandb_run_name: "adversarial-run"
+wandb_run_name: "cheat-loss-adversarial-run"
 compile_model: false
 image_size: 64
 discriminator_deepdream_loss_factor: 0.2
