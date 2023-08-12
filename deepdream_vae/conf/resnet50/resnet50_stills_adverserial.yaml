@@ -47,4 +47,4 @@ discriminator_generated_loss_factor: 0.2
 discriminator_mixed_loss_factor: 0.6
 generator_lr_multiplier: 1.0
 discriminator_lr_multiplier: 1.0
-scale_factor: 4
+scale_factor: 8
