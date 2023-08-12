@@ -1,7 +1,7 @@
 unet:
   n_blocks: 5
   n_layers_per_block: 6
-  n_first_block_channels: 48
+  n_first_block_channels: 32
   _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
@@ -41,7 +41,7 @@ log_interval: 10
 wandb_log: true
 wandb_run_name: "cheat-loss-large-adversarial-run"
 compile_model: false
-image_size: 64
+image_size: 128
 discriminator_deepdream_loss_factor: 0.2
 discriminator_generated_loss_factor: 0.2
 discriminator_mixed_loss_factor: 0.6
