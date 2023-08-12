@@ -11,7 +11,9 @@ import wandb
 from PIL import Image
 from tqdm import tqdm
 
-from deepdream_vae.conf.resnet50.resnet50_stills import Resnet50StillsExperimentConf
+from deepdream_vae.conf.resnet50.resnet50_stills_adverserial import (
+    Resnet50StillsExperimentConf,
+)
 from deepdream_vae.datasets.resnet50_deepdream import (
     Resnet50DeepdreamDataset,
     Resnet50DeepdreamDatasetConfig,
@@ -22,7 +24,7 @@ from deepdream_vae.models.discriminator import Discriminator, DiscriminatorConfi
 
 @hydra.main(
     config_path="../../conf/resnet50",
-    config_name="resnet50_stills.yaml",
+    config_name="resnet50_stills_adverserial.yaml",
     version_base=None,
 )
 def main(hydra_cfg: dict[Any, Any]) -> int:

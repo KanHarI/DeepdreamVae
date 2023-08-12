@@ -1,7 +1,7 @@
 unet:
   n_blocks: 4
   n_layers_per_block: 5
-  n_first_block_channels: 128
+  n_first_block_channels: 64
   _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
@@ -10,8 +10,8 @@ unet:
 
 discriminator:
   n_blocks: 5
-  n_layers_per_block: 5
-  n_first_block_channels: 64
+  n_layers_per_block: 4
+  n_first_block_channels: 32
   _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
@@ -30,8 +30,8 @@ optimizer:
   beta2: 0.99
   warmup_iters: 1_000
   max_iters: 100_000
-  init_std: 5e-3
-  batch_size: 4
+  init_std: 2e-2
+  batch_size: 12
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
 processed_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/data/out-images/RESNET50_IMAGENET/"
