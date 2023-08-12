@@ -85,6 +85,8 @@ class Discriminator(torch.nn.Module):
         loss = (
             -targets * torch.log(logits + self.config.loss_eps)
             - (1 - targets) * torch.log(1 - logits + self.config.loss_eps)
-            - (targets * 2 - 1) * x * self.config.discriminator_cheat_loss  # Rescue us when we're stuck
+            - (targets * 2 - 1)
+            * x
+            * self.config.discriminator_cheat_loss  # Rescue us when we're stuck
         )
         return typing.cast(torch.Tensor, loss.mean())
