@@ -180,7 +180,7 @@ class Resnet50DeepdreamDataset(
             hashlib.sha256(origin_file_name.encode()).hexdigest()[:8], 16
         )
         manual_seed += index
-        manual_seed %= 2 ** 32
+        manual_seed %= 2**32
         torch.manual_seed(manual_seed)
         origin_img_tensor = self.transform(origin_img) * 2 - 1
         torch.manual_seed(manual_seed)
