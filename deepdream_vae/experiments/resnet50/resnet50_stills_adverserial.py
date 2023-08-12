@@ -32,7 +32,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         data_class=Resnet50StillsExperimentConf, data=hydra_cfg
     )
     if config.wandb_log:
-        wandb.init(project="deepdream-vae-resnet50-stills", name=config.wandb_run_name)
+        wandb.init(project="deepdream-vae-resnet50-adverserial", name=config.wandb_run_name)
         wandb.config.update(config)
     print("Creating dataset...")
     # Create dataset
