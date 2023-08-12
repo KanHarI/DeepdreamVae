@@ -33,10 +33,10 @@ optimizer:
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
 processed_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/data/out-images/RESNET50_IMAGENET/"
-eval_interval: 50
+eval_interval: 100
 eval_iters: 10
 log_interval: 10
-wandb_log: false
+wandb_log: true
 wandb_run_name: "first-run"
 compile_model: false
 image_size: 64

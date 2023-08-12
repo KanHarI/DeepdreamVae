@@ -141,7 +141,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                             for t in batch
                         ]
                     )
-                    transformed_images = generative_model(*batch)
+                    transformed_images = generative_model(batch[0])
                     transformed_discriminator_loss = discriminator(
                         torch.cat([batch[0], transformed_images], dim=1),
                         torch.zeros(
@@ -210,8 +210,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 deepdream_image_to_save.save(deepdream_save_path)
                 output_image_to_save = Image.fromarray(sample_output_image)
                 output_image_to_save.save(output_save_path)
-                noise_volume = generative_model.noise_volume.mean().item()
-                noise_volume_std = generative_model.noise_volume.std().item()
+                noise_volume = generative_model.noise_proj.std().item()
                 # Log eval metrics to wandb
                 if config.wandb_log:
                     wandb.log(
@@ -229,7 +228,6 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                             "train_discriminator_loss_std": train_discriminator_losses.std().item(),
                             "lr": config.optimizer.get_lr(step),
                             "noise_volume": noise_volume,
-                            "noise_volume_std": noise_volume_std,
                             "input_image": wandb.Image(
                                 Image.fromarray(sample_input_image)
                             ),
@@ -246,7 +244,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 print(
                     f"Step {step}: eval_generator_loss: {eval_generator_losses.mean().item()}, eval_discriminator_loss: {eval_discriminator_losses.mean().item()}, eval_transformed_discriminator_loss: {eval_transformed_discriminator_losses.mean().item()}, eval_deepdream_discriminator_loss: {eval_deepdream_discriminator_losses.mean().item()}, eval_mixed_discriminator_loss: {eval_mixed_losses.mean().item()}\n"
                     f"train_generator_loss: {train_generator_losses.mean().item()}, train_discriminator_loss: {train_discriminator_losses.mean().item()}\n"
-                    f"lr: {config.optimizer.get_lr(step)}, noise_volume: {noise_volume}, noise_volume_std: {noise_volume_std}"
+                    f"lr: {config.optimizer.get_lr(step)}, noise_volume: {noise_volume}"
                 )
             generative_model.train()
             discriminator.train()
@@ -254,7 +252,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         batch = tuple(
             [t.to(device=config.unet.device, dtype=config.unet.dtype) for t in batch]
         )
-        transformed_images = generative_model(*batch)
+        transformed_images = generative_model(batch[0])
         transformed_discriminator_loss = discriminator(
             torch.cat([batch[0], transformed_images], dim=1),
             torch.zeros(

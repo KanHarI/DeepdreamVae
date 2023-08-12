@@ -44,9 +44,9 @@ class DeepdreamVAE(torch.nn.Module):
             block_channels *= 2
             image_size //= 2
         image_size *= 2
-        self.noise_volume = torch.nn.Parameter(
+        self.noise_proj = torch.nn.Parameter(
             torch.zeros(
-                (block_channels,),
+                (block_channels, block_channels),
                 device=self.config.device,
                 dtype=self.config.dtype,
                 requires_grad=True,
@@ -90,13 +90,14 @@ class DeepdreamVAE(torch.nn.Module):
         )
 
     def init_weights(self) -> None:
-        for encoder_block in self.encoder_blocks:
-            encoder_block.init_weights()
-        for decoder_block in self.decoders_blocks:
-            decoder_block.init_weights()
         torch.nn.init.normal_(
             self.channels_expander, mean=0.0, std=self.config.init_std
         )
+        for encoder_block in self.encoder_blocks:
+            encoder_block.init_weights()
+        torch.nn.init.normal_(self.noise_proj, mean=0.0, std=self.config.init_std)
+        for decoder_block in self.decoders_blocks:
+            decoder_block.init_weights()
         torch.nn.init.normal_(
             self.channels_contractor, mean=0.0, std=self.config.init_std
         )
@@ -109,8 +110,10 @@ class DeepdreamVAE(torch.nn.Module):
             skipped.append(x)
             x = torch.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
         x = x + torch.einsum(
-            "bchw,c->bchw", torch.randn_like(x), torch.exp(self.noise_volume)
-        )
+            "bc,cd->bd",
+            torch.randn(x.shape[:2], device=x.device, dtype=x.dtype),
+            self.noise_proj,
+        ).unsqueeze(-1).unsqueeze(-1)
         for decoder_block in self.decoders_blocks:
             x = torch.nn.functional.interpolate(x, scale_factor=2, mode="nearest")
             x += skipped.pop()
@@ -118,5 +121,5 @@ class DeepdreamVAE(torch.nn.Module):
         x = torch.einsum("cl,...lhw->...chw", self.channels_contractor, x)
         return x
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.transform(x)
