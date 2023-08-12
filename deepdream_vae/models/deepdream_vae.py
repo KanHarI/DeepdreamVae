@@ -17,6 +17,7 @@ class DeepdreamVAEConfig:
     dtype: torch.dtype
     ln_eps: float
     image_size: int
+    noise_proj_init_std_factor: float
 
 
 class DeepdreamVAE(torch.nn.Module):
@@ -95,7 +96,7 @@ class DeepdreamVAE(torch.nn.Module):
         )
         for encoder_block in self.encoder_blocks:
             encoder_block.init_weights()
-        torch.nn.init.normal_(self.noise_proj, mean=0.0, std=self.config.init_std)
+        torch.nn.init.normal_(self.noise_proj, mean=0.0, std=self.config.init_std * self.config.noise_proj_init_std_factor)
         for decoder_block in self.decoders_blocks:
             decoder_block.init_weights()
         torch.nn.init.normal_(
@@ -116,7 +117,7 @@ class DeepdreamVAE(torch.nn.Module):
         ).unsqueeze(-1).unsqueeze(-1)
         for decoder_block in self.decoders_blocks:
             x = torch.nn.functional.interpolate(x, scale_factor=2, mode="nearest")
-            x += skipped.pop()
+            x = x / 2 + skipped.pop() / 2
             x = decoder_block(x)
         x = torch.einsum("cl,...lhw->...chw", self.channels_contractor, x)
         return x

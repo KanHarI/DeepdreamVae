@@ -15,6 +15,7 @@ class UNetConf:
     ln_eps: float
     device: str
     _dtype: str
+    noise_proj_init_std_factor: float
 
     @property
     def activation(self) -> Callable[[torch.Tensor], torch.Tensor]:

@@ -20,6 +20,7 @@ class DiscriminatorConfig:
     image_size: int
     loss_eps: float
     discriminator_cheat_loss: float
+    discriminator_cheat_factor: float
 
 
 class Discriminator(torch.nn.Module):
@@ -82,11 +83,16 @@ class Discriminator(torch.nn.Module):
 
     def forward(self, x: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
         logits, x = self.estimate_is_image_deepdream(x)
-        loss = (
-            -targets * torch.log(logits + self.config.loss_eps)
-            - (1 - targets) * torch.log(1 - logits + self.config.loss_eps)
-            - (targets * 2 - 1)
-            * x
-            * self.config.discriminator_cheat_loss  # Rescue us when we're stuck
-        )
+        loss_if_positive = -torch.log(logits + self.config.loss_eps)
+        loss_if_negative = -torch.log(1 - logits + self.config.loss_eps)
+        cheat_loss = ((targets * 2 - 1) * self.config.discriminator_cheat_factor - x) ** 2 * self.config.discriminator_cheat_loss
+        loss = (loss_if_positive * targets + loss_if_negative * (1 - targets) + cheat_loss).mean()
+        # loss = (
+        #     -targets * torch.log(logits + self.config.loss_eps)
+        #     - (1 - targets) * torch.log(1 - logits + self.config.loss_eps)
+        #     - (targets * 2 - 1)
+        #     * x
+        #     * self.config.discriminator_cheat_loss  # Rescue us when we're stuck
+        # )
+        # loss = ((logits - targets) ** 2).mean()
         return typing.cast(torch.Tensor, loss.mean())

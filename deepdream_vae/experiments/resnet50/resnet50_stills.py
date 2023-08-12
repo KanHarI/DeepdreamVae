@@ -74,6 +74,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         dtype=config.unet.dtype,
         ln_eps=config.unet.ln_eps,
         image_size=config.image_size,
+        noise_proj_init_std_factor=config.unet.noise_proj_init_std_factor,
     )
     generative_model = DeepdreamVAE(model_conf)
     generative_model.init_weights()
@@ -90,6 +91,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         image_size=config.image_size,
         loss_eps=config.discriminator.loss_eps,
         discriminator_cheat_loss=config.discriminator.discriminator_cheat_loss,
+        discriminator_cheat_factor=config.discriminator.discriminator_cheat_factor,
     )
     discriminator = Discriminator(discriminator_config)
     discriminator.init_weights()
