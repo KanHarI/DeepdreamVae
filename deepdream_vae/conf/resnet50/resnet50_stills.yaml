@@ -1,7 +1,7 @@
 unet:
-  n_blocks: 4
-  n_layers_per_block: 4
-  n_first_block_channels: 8
+  n_blocks: 5
+  n_layers_per_block: 5
+  n_first_block_channels: 12
   _activation: "new_gelu"
   ln_eps: 1e-5
   device: "cuda"
