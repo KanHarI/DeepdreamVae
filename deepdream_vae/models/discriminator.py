@@ -22,6 +22,7 @@ class DiscriminatorConfig:
     loss_eps: float
     discriminator_cheat_loss: float
     cheat_loss_eps: float
+    n_stacked_images_in: int
 
 
 class Discriminator(torch.nn.Module):
@@ -29,8 +30,7 @@ class Discriminator(torch.nn.Module):
         super().__init__()
         self.config = config
         self.color_to_channels = torch.zeros(
-            # 6 - input image RGB, transformed image RGB
-            (6, config.n_first_block_channels),
+            (config.n_stacked_images_in * 3, config.n_first_block_channels),
             device=config.device,
             dtype=config.dtype,
             requires_grad=True,

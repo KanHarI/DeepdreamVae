@@ -6,7 +6,7 @@ from deepdream_vae.conf.building_blocks.unet import UNetConf
 
 
 @dataclasses.dataclass
-class Resnet50StillsAdversarialExperimentConf:
+class Resnet50StyleGanExperimentConf:
     unet: UNetConf
     discriminator: DiscriminatorConf
     optimizer: OptimizerConf

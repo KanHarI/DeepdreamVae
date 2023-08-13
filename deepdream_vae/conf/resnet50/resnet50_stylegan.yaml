@@ -40,7 +40,6 @@ eval_iters: 50
 log_interval: 10
 wandb_log: true
 wandb_run_name: "high-gamma-run"
-compile_model: false
 image_size: 64
 discriminator_deepdream_loss_factor: 0.2
 discriminator_generated_loss_factor: 0.2

@@ -59,8 +59,8 @@ class DeepdreamVAE(torch.nn.Module):
             self.decoders_blocks_config.append(
                 BlockConfig(
                     n_layers=self.config.n_layers_per_block,
-                    n_channels_in=block_channels * 2,
-                    n_channels_out=block_channels,
+                    n_channels_in=block_channels,
+                    n_channels_out=block_channels // 2,
                     activation=self.config.activation,
                     dropout=0.0,
                     init_std=self.config.init_std,
@@ -99,7 +99,7 @@ class DeepdreamVAE(torch.nn.Module):
         )
         self.final_block_config = BlockConfig(
             n_layers=self.config.n_layers_per_block,
-            n_channels_in=self.config.n_first_block_channels * 2,
+            n_channels_in=self.config.n_first_block_channels,
             n_channels_out=self.config.n_first_block_channels,
             activation=self.config.activation,
             dropout=0.0,
@@ -147,9 +147,8 @@ class DeepdreamVAE(torch.nn.Module):
         ).unsqueeze(-1).unsqueeze(-1)
         for j, decoder_block in enumerate(self.decoders_blocks):
             x = torch.nn.functional.interpolate(x, scale_factor=2, mode="nearest")
-            x = torch.cat([skipped.pop(), x], dim=1) / 2
-            x = decoder_block(x)
-        x = self.final_block(torch.cat([skipped.pop(), x], dim=1))
+            x = decoder_block(x + skipped.pop())
+        x = self.final_block(x + skipped.pop())
         # Using the same layer for color-> channels and channels -> color
         # results in much faster initial convergence.
         x = torch.einsum("lc,...chw->...lhw", self.channels_expander, x)
