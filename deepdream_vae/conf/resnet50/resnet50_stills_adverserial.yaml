@@ -3,24 +3,25 @@ unet:
   n_layers_per_block: 6
   n_layers_mini_block: 3
   n_first_block_channels: 48
-  mixing_factor_scale: 25.0
-  _activation: "softplus"
+  mixing_factor_scale: 10.0
+  _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
   _dtype: "float16"
 
 discriminator:
   n_blocks: 5
-  n_layers_per_block: 4
-  n_layers_mini_block: 2
-  n_first_block_channels: 48
-  _activation: "softplus"
+  n_layers_per_block: 6
+  n_layers_mini_block: 3
+  n_first_block_channels: 24
+  _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
   _dtype: "float16"
-  loss_eps: 1e-5
+  loss_eps: 1e-4
   discriminator_cheat_loss: 2e-1
   cheat_loss_eps: 1e-2  # Lower value = stronger gradient around generator, but more unstable training.
+  bilinear_form_dimension: 32
 
 optimizer:
   _optimizer: "adamw"
@@ -29,7 +30,7 @@ optimizer:
   lr_schedule: "invsqrt"
   adam_eps: 1e-4
   beta1: 0.9
-  beta2: 0.995
+  beta2: 0.999
   warmup_iters: 15_000
   max_iters: 100_000
   init_std: 1e-2

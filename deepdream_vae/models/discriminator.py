@@ -1,4 +1,5 @@
 import dataclasses
+import math
 import typing
 from typing import Callable
 
@@ -24,6 +25,7 @@ class DiscriminatorConfig:
     discriminator_cheat_loss: float
     cheat_loss_eps: float
     n_stacked_images_in: int
+    bilinear_form_dimension: int
 
 
 class Discriminator(torch.nn.Module):
@@ -60,18 +62,45 @@ class Discriminator(torch.nn.Module):
         self.encoder_blocks = torch.nn.ModuleList(
             [Block(config) for config in self.encoder_blocks_config]
         )
-        self.estimator = torch.zeros(
-            (num_channels, image_size, image_size),
+        self.final_ln = torch.nn.LayerNorm(
+            [num_channels],
+            eps=config.ln_eps,
             device=config.device,
             dtype=config.dtype,
-            requires_grad=True,
         )
+        self.pr1 = torch.nn.Parameter(
+            torch.zeros(
+                (num_channels, config.bilinear_form_dimension),
+                device=config.device,
+                dtype=config.dtype,
+                requires_grad=True,
+            )
+        )
+        self.pr2 = torch.nn.Parameter(
+            torch.zeros(
+                (num_channels, config.bilinear_form_dimension),
+                device=config.device,
+                dtype=config.dtype,
+                requires_grad=True,
+            )
+        )
+        self.estimator = torch.nn.Parameter(
+            torch.zeros(
+                (config.bilinear_form_dimension, config.bilinear_form_dimension),
+                device=config.device,
+                dtype=config.dtype,
+                requires_grad=True,
+            )
+        )
+        self.bilinear_normalizing_factor = 1 / math.sqrt(config.bilinear_form_dimension)
 
     def init_weights(self) -> None:
         torch.nn.init.normal_(self.color_to_channels, std=self.config.init_std)
         for block in self.encoder_blocks:
             block.init_weights()
         torch.nn.init.normal_(self.estimator, std=self.config.init_std)
+        torch.nn.init.normal_(self.pr1, std=self.config.init_std)
+        torch.nn.init.normal_(self.pr2, std=self.config.init_std)
 
     def estimate_is_image_deepdream(
         self, x: torch.Tensor
@@ -80,7 +109,13 @@ class Discriminator(torch.nn.Module):
         for block in self.encoder_blocks:
             x = block(x)
             x = torch.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
-        x = torch.einsum("chw,bchw->b", self.estimator, x)
+        x = x.sum(dim=(2, 3))  # (batch_size, num_channels)
+        x = self.final_ln(x)
+        # Bilinear form to extract features
+        pr1 = torch.einsum("bc,cd->bd", x, self.pr1) * self.bilinear_normalizing_factor
+        pr2 = torch.einsum("bc,ce->be", x, self.pr2) * self.bilinear_normalizing_factor
+        x = torch.einsum("bd,be->bde", pr1, pr2)
+        x = torch.einsum("bde,de->b", x, self.estimator)
         logits = torch.sigmoid(x)
         return logits, x
 

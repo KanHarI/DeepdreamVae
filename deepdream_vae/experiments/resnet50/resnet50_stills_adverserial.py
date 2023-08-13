@@ -100,6 +100,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         discriminator_cheat_loss=config.discriminator.discriminator_cheat_loss,
         cheat_loss_eps=config.discriminator.cheat_loss_eps,
         n_stacked_images_in=2,
+        bilinear_form_dimension=config.discriminator.bilinear_form_dimension,
     )
     discriminator = Discriminator(discriminator_config)
     discriminator.init_weights()

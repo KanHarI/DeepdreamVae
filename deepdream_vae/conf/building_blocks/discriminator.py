@@ -20,6 +20,7 @@ class DiscriminatorConf:
     loss_eps: float
     discriminator_cheat_loss: float
     cheat_loss_eps: float
+    bilinear_form_dimension: int
 
     @property
     def activation(self) -> Callable[[torch.Tensor], torch.Tensor]:
