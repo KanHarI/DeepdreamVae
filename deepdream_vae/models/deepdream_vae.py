@@ -18,7 +18,6 @@ class DeepdreamVAEConfig:
     dtype: torch.dtype
     ln_eps: float
     image_size: int
-    noise_proj_init_std_factor: float
 
 
 class DeepdreamVAE(torch.nn.Module):
@@ -86,17 +85,6 @@ class DeepdreamVAE(torch.nn.Module):
                 requires_grad=True,
             )
         )
-        self.final_skip_linear = torch.nn.Parameter(
-            torch.zeros(
-                (
-                    self.config.n_first_block_channels * 2,
-                    self.config.n_first_block_channels,
-                ),
-                device=self.config.device,
-                dtype=self.config.dtype,
-                requires_grad=True,
-            )
-        )
         self.final_block_config = BlockConfig(
             n_layers=self.config.n_layers_per_block,
             n_channels_in=self.config.n_first_block_channels,
@@ -108,6 +96,14 @@ class DeepdreamVAE(torch.nn.Module):
             dtype=self.config.dtype,
             ln_eps=self.config.ln_eps,
             image_size=self.config.image_size,
+        )
+        self.mixing_factors = torch.nn.Parameter(
+            torch.zeros(
+                (self.config.n_blocks + 1),
+                device=self.config.device,
+                dtype=self.config.dtype,
+                requires_grad=True,
+            )
         )
         self.final_block = Block(self.final_block_config)
 
@@ -122,16 +118,16 @@ class DeepdreamVAE(torch.nn.Module):
         torch.nn.init.normal_(
             self.noise_proj,
             mean=0.0,
-            std=self.config.init_std * self.config.noise_proj_init_std_factor,
+            std=self.config.init_std,
         )
         for decoder_block in self.decoders_blocks:
             decoder_block.init_weights()
-        torch.nn.init.normal_(
-            self.final_skip_linear,
-            mean=0.0,
-            std=1.0 / math.sqrt(self.config.n_first_block_channels),
-        )
         self.final_block.init_weights()
+        torch.nn.init.normal_(
+            self.mixing_factors,
+            mean=0.0,
+            std=self.config.init_std,
+        )
 
     def transform(self, x: torch.Tensor) -> torch.Tensor:
         x = torch.einsum("lc,...lhw->...chw", self.channels_expander, x)
@@ -147,8 +143,10 @@ class DeepdreamVAE(torch.nn.Module):
         ).unsqueeze(-1).unsqueeze(-1)
         for j, decoder_block in enumerate(self.decoders_blocks):
             x = torch.nn.functional.interpolate(x, scale_factor=2, mode="nearest")
-            x = decoder_block(x + skipped.pop())
-        x = self.final_block(x + skipped.pop())
+            mixing_factor = torch.sigmoid(self.mixing_factors[j])
+            x = decoder_block(mixing_factor * x + (1 - mixing_factor) * skipped.pop())
+        mixing_factor = torch.sigmoid(self.mixing_factors[-1])
+        x = self.final_block(mixing_factor * x + (1 - mixing_factor) * skipped.pop())
         # Using the same layer for color-> channels and channels -> color
         # results in much faster initial convergence.
         x = torch.einsum("lc,...chw->...lhw", self.channels_expander, x)

@@ -6,7 +6,6 @@ unet:
   ln_eps: 1e-4
   device: "cuda"
   _dtype: "float16"
-  noise_proj_init_std_factor: 1e-2
 
 discriminator:
   n_blocks: 5
@@ -17,20 +16,20 @@ discriminator:
   device: "cuda"
   _dtype: "float16"
   loss_eps: 1e-5
-  discriminator_cheat_loss: 1e-1
-  cheat_loss_eps: 1e-3  # Lower value = stronger gradient around generator, but more unstable training.
+  discriminator_cheat_loss: 2e-1
+  cheat_loss_eps: 1e-2  # Lower value = stronger gradient around generator, but more unstable training.
 
 optimizer:
   _optimizer: "adamw"
-  lr: 2e-4
+  lr: 1e-4
   weight_decay: 5e-2
   lr_schedule: "invsqrt"
   adam_eps: 1e-4
   beta1: 0.9
   beta2: 0.995
-  warmup_iters: 10_000
+  warmup_iters: 15_000
   max_iters: 100_000
-  init_std: 5e-3
+  init_std: 1e-3
   batch_size: 12
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
