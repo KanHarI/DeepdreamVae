@@ -11,6 +11,7 @@ from deepdream_vae.utils.inv_sigmoid import inv_sigmoid
 @dataclasses.dataclass
 class DiscriminatorConfig:
     n_layers_per_block: int
+    n_layers_mini_block: int
     n_blocks: int
     n_first_block_channels: int
     init_std: float
@@ -42,6 +43,7 @@ class Discriminator(torch.nn.Module):
             self.encoder_blocks_config.append(
                 BlockConfig(
                     n_layers=config.n_layers_per_block,
+                    n_layers_mini_block=config.n_layers_mini_block,
                     n_channels_in=num_channels,
                     n_channels_out=num_channels * 2,
                     activation=config.activation,

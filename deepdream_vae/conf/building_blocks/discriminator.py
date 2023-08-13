@@ -10,6 +10,7 @@ from deepdream_vae.utils.new_gelu import new_gelu
 class DiscriminatorConf:
     n_blocks: int
     n_layers_per_block: int
+    n_layers_mini_block: int
     n_first_block_channels: int
     _activation: str
     device: str

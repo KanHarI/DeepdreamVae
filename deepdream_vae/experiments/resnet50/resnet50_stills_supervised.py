@@ -71,6 +71,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
     print("Creating model...")
     model_conf = DeepdreamVAEConfig(
         n_layers_per_block=config.unet.n_layers_per_block,
+        n_layers_mini_block=config.unet.n_layers_mini_block,
         n_blocks=config.unet.n_blocks,
         n_first_block_channels=config.unet.n_first_block_channels,
         init_std=config.optimizer.init_std,
@@ -79,6 +80,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         dtype=config.unet.dtype,
         ln_eps=config.unet.ln_eps,
         image_size=config.image_size,
+        mixing_factor_scale=config.unet.mixing_factor_scale,
     )
     generative_model = DeepdreamVAE(model_conf)
     generative_model.init_weights()

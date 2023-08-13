@@ -10,7 +10,9 @@ from deepdream_vae.utils.new_gelu import new_gelu
 class UNetConf:
     n_blocks: int
     n_layers_per_block: int
+    n_layers_mini_block: int
     n_first_block_channels: int
+    mixing_factor_scale: float
     _activation: str
     ln_eps: float
     device: str

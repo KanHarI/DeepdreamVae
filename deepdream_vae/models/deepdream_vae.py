@@ -18,6 +18,8 @@ class DeepdreamVAEConfig:
     dtype: torch.dtype
     ln_eps: float
     image_size: int
+    n_layers_mini_block: int
+    mixing_factor_scale: float
 
 
 class DeepdreamVAE(torch.nn.Module):
@@ -31,6 +33,7 @@ class DeepdreamVAE(torch.nn.Module):
             self.encoder_blocks_config.append(
                 BlockConfig(
                     n_layers=self.config.n_layers_per_block,
+                    n_layers_mini_block=self.config.n_layers_mini_block,
                     n_channels_in=block_channels,
                     n_channels_out=block_channels * 2,
                     activation=self.config.activation,
@@ -58,6 +61,7 @@ class DeepdreamVAE(torch.nn.Module):
             self.decoders_blocks_config.append(
                 BlockConfig(
                     n_layers=self.config.n_layers_per_block,
+                    n_layers_mini_block=self.config.n_layers_mini_block,
                     n_channels_in=block_channels,
                     n_channels_out=block_channels // 2,
                     activation=self.config.activation,
@@ -87,6 +91,7 @@ class DeepdreamVAE(torch.nn.Module):
         )
         self.final_block_config = BlockConfig(
             n_layers=self.config.n_layers_per_block,
+            n_layers_mini_block=self.config.n_layers_mini_block,
             n_channels_in=self.config.n_first_block_channels,
             n_channels_out=self.config.n_first_block_channels,
             activation=self.config.activation,
@@ -133,9 +138,13 @@ class DeepdreamVAE(torch.nn.Module):
         ).unsqueeze(-1).unsqueeze(-1)
         for j, decoder_block in enumerate(self.decoders_blocks):
             x = torch.nn.functional.interpolate(x, scale_factor=2, mode="nearest")
-            mixing_factor = torch.sigmoid(self.mixing_factors[j])
+            mixing_factor = torch.sigmoid(
+                self.mixing_factors[j] * self.config.mixing_factor_scale
+            )
             x = decoder_block(mixing_factor * x + (1 - mixing_factor) * skipped.pop())
-        mixing_factor = torch.sigmoid(self.mixing_factors[-1])
+        mixing_factor = torch.sigmoid(
+            self.mixing_factors[-1] * self.config.mixing_factor_scale
+        )
         x = self.final_block(mixing_factor * x + (1 - mixing_factor) * skipped.pop())
         # Using the same layer for color-> channels and channels -> color
         # results in much faster initial convergence.

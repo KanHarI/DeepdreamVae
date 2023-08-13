@@ -7,6 +7,7 @@ import torch
 @dataclasses.dataclass
 class BlockConfig:
     n_layers: int
+    n_layers_mini_block: int
     n_channels_in: int
     n_channels_out: int
     activation: Callable[[torch.Tensor], torch.Tensor]
@@ -21,6 +22,7 @@ class BlockConfig:
 class Block(torch.nn.Module):
     def __init__(self, config: BlockConfig):
         super().__init__()
+        assert config.n_layers % config.n_layers_mini_block == 0
         self.config = config
         self.conv_layers = torch.nn.ModuleList(
             [
@@ -70,5 +72,9 @@ class Block(torch.nn.Module):
         ]
         x = tmp
         for j, conv_layer in enumerate(self.conv_layers):
-            x = x + self.activation(conv_layer(self.layer_norms[j](x)))
+            x = self.activation(conv_layer(self.layer_norms[j](x)))
+            if (
+                j + (self.config.n_layers_mini_block - 1)
+            ) % self.config.n_layers_mini_block == 0:
+                x += tmp
         return x

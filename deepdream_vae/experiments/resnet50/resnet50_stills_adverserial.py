@@ -79,6 +79,8 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         dtype=config.unet.dtype,
         ln_eps=config.unet.ln_eps,
         image_size=config.image_size,
+        n_layers_mini_block=config.unet.n_layers_mini_block,
+        mixing_factor_scale=config.unet.mixing_factor_scale,
     )
     generative_model = DeepdreamVAE(model_conf)
     generative_model.init_weights()
@@ -86,6 +88,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
     discriminator_config = DiscriminatorConfig(
         n_blocks=config.discriminator.n_blocks,
         n_layers_per_block=config.discriminator.n_layers_per_block,
+        n_layers_mini_block=config.discriminator.n_layers_mini_block,
         n_first_block_channels=config.discriminator.n_first_block_channels,
         init_std=config.optimizer.init_std,
         activation=config.discriminator.activation,
@@ -243,7 +246,10 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 noise_volume = generative_model.noise_proj.norm().item()
                 mixing_factors = []
                 for k in range(config.unet.n_blocks + 1):
-                    mixing_factors.append(generative_model.mixing_factors[k].item())
+                    mixing_factors.append(
+                        generative_model.mixing_factors[k].item()
+                        * config.unet.mixing_factor_scale
+                    )
                 # Log eval metrics to wandb
                 if config.wandb_log:
                     wandb.log(
