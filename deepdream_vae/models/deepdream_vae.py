@@ -115,19 +115,9 @@ class DeepdreamVAE(torch.nn.Module):
         )
         for encoder_block in self.encoder_blocks:
             encoder_block.init_weights()
-        torch.nn.init.normal_(
-            self.noise_proj,
-            mean=0.0,
-            std=self.config.init_std,
-        )
         for decoder_block in self.decoders_blocks:
             decoder_block.init_weights()
         self.final_block.init_weights()
-        torch.nn.init.normal_(
-            self.mixing_factors,
-            mean=0.0,
-            std=self.config.init_std,
-        )
 
     def transform(self, x: torch.Tensor) -> torch.Tensor:
         x = torch.einsum("lc,...lhw->...chw", self.channels_expander, x)
