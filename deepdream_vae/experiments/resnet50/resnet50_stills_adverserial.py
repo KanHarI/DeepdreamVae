@@ -241,7 +241,9 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 output_image_to_save = Image.fromarray(sample_output_image)
                 output_image_to_save.save(output_save_path)
                 noise_volume = generative_model.noise_proj.norm().item()
-                mixing_factor = generative_model.mixing_factors.mean().item()
+                mixing_factors = []
+                for k in range(config.unet.n_blocks + 1):
+                    mixing_factors.append(generative_model.mixing_factors[k].item())
                 # Log eval metrics to wandb
                 if config.wandb_log:
                     wandb.log(
@@ -259,7 +261,10 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                             "train_discriminator_loss_std": train_discriminator_losses.std().item(),
                             "lr": config.optimizer.get_lr(step),
                             "noise_volume": noise_volume,
-                            "mixing_factor": mixing_factor,
+                            **{
+                                f"mixing_factor_{k}": mixing_factors[k]
+                                for k in range(config.unet.n_blocks + 1)
+                            },
                             "input_image": wandb.Image(
                                 Image.fromarray(sample_input_image)
                             ),
@@ -276,7 +281,8 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 print(
                     f"Step {step}: eval_generator_loss: {eval_generator_losses.mean().item()}, eval_discriminator_loss: {eval_discriminator_losses.mean().item()}, eval_transformed_discriminator_loss: {eval_transformed_discriminator_losses.mean().item()}, eval_deepdream_discriminator_loss: {eval_deepdream_discriminator_losses.mean().item()}, eval_mixed_discriminator_loss: {eval_mixed_losses.mean().item()}\n"
                     f"train_generator_loss: {train_generator_losses.mean().item()}, train_discriminator_loss: {train_discriminator_losses.mean().item()}\n"
-                    f"lr: {config.optimizer.get_lr(step)}, noise_volume: {noise_volume}, mixing_factor: {mixing_factor}"
+                    f"lr: {config.optimizer.get_lr(step)}, noise_volume: {noise_volume}\n"
+                    f"mixing_factors: {mixing_factors}\n"
                 )
             generative_model.train()
             discriminator.train()
