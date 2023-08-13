@@ -4,6 +4,7 @@ from typing import Callable
 import torch
 
 from deepdream_vae.utils.new_gelu import new_gelu
+from deepdream_vae.utils.softplus import softplus
 
 
 @dataclasses.dataclass
@@ -29,6 +30,8 @@ class DiscriminatorConf:
                 return torch.nn.functional.gelu
             case "new_gelu":
                 return new_gelu
+            case "softplus":
+                return softplus
             case _:
                 raise ValueError(f"Unknown activation: {self._activation}")
 

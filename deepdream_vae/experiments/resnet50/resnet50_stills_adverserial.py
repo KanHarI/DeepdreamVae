@@ -243,7 +243,6 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 deepdream_image_to_save.save(deepdream_save_path)
                 output_image_to_save = Image.fromarray(sample_output_image)
                 output_image_to_save.save(output_save_path)
-                noise_volume = generative_model.noise_proj.norm().item()
                 mixing_factors = []
                 for k in range(config.unet.n_blocks + 1):
                     mixing_factors.append(
@@ -266,7 +265,6 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                             "train_discriminator_loss": train_discriminator_losses.mean().item(),
                             "train_discriminator_loss_std": train_discriminator_losses.std().item(),
                             "lr": config.optimizer.get_lr(step),
-                            "noise_volume": noise_volume,
                             **{
                                 f"mixing_factor_{k}": mixing_factors[k]
                                 for k in range(config.unet.n_blocks + 1)
@@ -287,8 +285,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 print(
                     f"Step {step}: eval_generator_loss: {eval_generator_losses.mean().item()}, eval_discriminator_loss: {eval_discriminator_losses.mean().item()}, eval_transformed_discriminator_loss: {eval_transformed_discriminator_losses.mean().item()}, eval_deepdream_discriminator_loss: {eval_deepdream_discriminator_losses.mean().item()}, eval_mixed_discriminator_loss: {eval_mixed_losses.mean().item()}\n"
                     f"train_generator_loss: {train_generator_losses.mean().item()}, train_discriminator_loss: {train_discriminator_losses.mean().item()}\n"
-                    f"lr: {config.optimizer.get_lr(step)}, noise_volume: {noise_volume}\n"
-                    f"mixing_factors: {mixing_factors}\n"
+                    f"lr: {config.optimizer.get_lr(step)}, mixing_factors: {mixing_factors}\n"
                 )
             generative_model.train()
             discriminator.train()
