@@ -80,7 +80,6 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         dtype=config.unet.dtype,
         ln_eps=config.unet.ln_eps,
         image_size=config.image_size,
-        mixing_factor_scale=config.unet.mixing_factor_scale,
     )
     generative_model = DeepdreamVAE(model_conf)
     generative_model.init_weights()

@@ -1,39 +1,38 @@
 unet:
   n_blocks: 4
-  n_layers_per_block: 6
+  n_layers_per_block: 9
   n_layers_mini_block: 3
-  n_first_block_channels: 48
-  mixing_factor_scale: 10.0
-  _activation: "new_gelu"
+  n_first_block_channels: 6
+  _activation: "softplus"
   ln_eps: 1e-4
   device: "cuda"
-  _dtype: "float16"
+  _dtype: "float32"
 
 discriminator:
   n_blocks: 5
   n_layers_per_block: 6
   n_layers_mini_block: 3
-  n_first_block_channels: 24
-  _activation: "new_gelu"
+  n_first_block_channels: 12
+  _activation: "softplus"
   ln_eps: 1e-4
   device: "cuda"
-  _dtype: "float16"
+  _dtype: "float32"
   loss_eps: 1e-4
   discriminator_cheat_loss: 2e-1
   cheat_loss_eps: 1e-2  # Lower value = stronger gradient around generator, but more unstable training.
-  bilinear_form_dimension: 32
+  bilinear_form_dimension: 64
 
 optimizer:
   _optimizer: "adamw"
   lr: 1e-4
   weight_decay: 5e-2
   lr_schedule: "invsqrt"
-  adam_eps: 1e-4
+  adam_eps: 1e-6
   beta1: 0.9
   beta2: 0.999
   warmup_iters: 15_000
   max_iters: 100_000
-  init_std: 1e-2
+  init_std: 5e-3
   batch_size: 12
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"

@@ -19,7 +19,6 @@ class DeepdreamVAEConfig:
     ln_eps: float
     image_size: int
     n_layers_mini_block: int
-    mixing_factor_scale: float
 
 
 class DeepdreamVAE(torch.nn.Module):
@@ -103,6 +102,14 @@ class DeepdreamVAE(torch.nn.Module):
             )
         )
         self.final_block = Block(self.final_block_config)
+        self.noise_volumes = torch.nn.Parameter(
+            torch.zeros(
+                (self.config.n_blocks),
+                device=self.config.device,
+                dtype=self.config.dtype,
+                requires_grad=True,
+            )
+        )
 
     def init_weights(self) -> None:
         torch.nn.init.normal_(
@@ -120,19 +127,24 @@ class DeepdreamVAE(torch.nn.Module):
         x = torch.einsum("lc,...lhw->...chw", self.channels_expander, x)
         skipped = [x]
         for i, encoder_block in enumerate(self.encoder_blocks):
-            x = torch.cat([x, torch.randn_like(x)], dim=1)
+            x = torch.cat(
+                [
+                    x,
+                    torch.randn_like(x)
+                    * torch.exp(self.noise_volumes[i] * math.sqrt(x.shape[1])),
+                ],
+                dim=1,
+            )
             x = encoder_block(x)
             skipped.append(x)
             x = torch.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
         for j, decoder_block in enumerate(self.decoders_blocks):
             x = torch.nn.functional.interpolate(x, scale_factor=2, mode="nearest")
             mixing_factor = torch.sigmoid(
-                self.mixing_factors[j] * self.config.mixing_factor_scale
+                self.mixing_factors[j] * math.sqrt(x.shape[1])
             )
             x = decoder_block(mixing_factor * x + (1 - mixing_factor) * skipped.pop())
-        mixing_factor = torch.sigmoid(
-            self.mixing_factors[-1] * self.config.mixing_factor_scale
-        )
+        mixing_factor = torch.sigmoid(self.mixing_factors[-1] * math.sqrt(x.shape[1]))
         x = self.final_block(mixing_factor * x + (1 - mixing_factor) * skipped.pop())
         # Using the same layer for color-> channels and channels -> color
         # results in much faster initial convergence.

@@ -62,6 +62,7 @@ class Discriminator(torch.nn.Module):
         self.encoder_blocks = torch.nn.ModuleList(
             [Block(config) for config in self.encoder_blocks_config]
         )
+        self.binlinear_input_dim = num_channels
         self.final_ln = torch.nn.LayerNorm(
             [num_channels],
             eps=config.ln_eps,
@@ -108,8 +109,13 @@ class Discriminator(torch.nn.Module):
                 requires_grad=True,
             )
         )
-        self.bilinear_normalizing_factor = 1 / math.sqrt(
-            num_channels * config.bilinear_form_dimension * config.init_std**2
+        self.linear_estimator = torch.nn.Parameter(
+            torch.zeros(
+                (num_channels,),
+                device=config.device,
+                dtype=config.dtype,
+                requires_grad=True,
+            )
         )
         self.final_bias = torch.nn.Parameter(
             torch.zeros(
@@ -119,16 +125,20 @@ class Discriminator(torch.nn.Module):
                 requires_grad=True,
             )
         )
+        self.bilinear_numerical_stability_constant = 1 / math.sqrt(
+            self.binlinear_input_dim * self.config.bilinear_form_dimension
+        )
 
     def init_weights(self) -> None:
         torch.nn.init.normal_(self.color_to_channels, std=self.config.init_std)
         for block in self.encoder_blocks:
             block.init_weights()
         torch.nn.init.normal_(self.estimator, std=self.config.init_std)
-        torch.nn.init.normal_(self.pr1, std=self.config.init_std)
-        torch.nn.init.normal_(self.pr2, std=self.config.init_std)
+        torch.nn.init.normal_(self.pr1, std=1.0)
+        torch.nn.init.normal_(self.pr2, std=1.0)
         torch.nn.init.normal_(self.pr1_bias, std=self.config.init_std)
         torch.nn.init.normal_(self.pr2_bias, std=self.config.init_std)
+        torch.nn.init.normal_(self.linear_estimator, std=self.config.init_std)
 
     def estimate_is_image_deepdream(
         self, x: torch.Tensor
@@ -139,15 +149,22 @@ class Discriminator(torch.nn.Module):
             x = torch.nn.functional.max_pool2d(x, kernel_size=2, stride=2)
         x = x.sum(dim=(2, 3))  # (batch_size, num_channels)
         x = self.final_ln(x)
-        # Bilinear form to extract features
-        pr1 = (
-            torch.einsum("bc,cd->bd", x, self.pr1) + self.pr1_bias
-        ) * self.bilinear_normalizing_factor
-        pr2 = (
-            torch.einsum("bc,ce->be", x, self.pr2) + self.pr2_bias
-        ) * self.bilinear_normalizing_factor
-        x = torch.einsum("bd,be->bde", pr1, pr2)
-        x = torch.einsum("bde,de->b", x, self.estimator) + self.final_bias
+        # # Bilinear form to extract features
+        # pr1 = (
+        #     torch.einsum("bc,cd->bd", x, self.pr1)
+        #     * self.bilinear_numerical_stability_constant
+        #     + self.pr1_bias
+        # )
+        # pr2 = (
+        #     torch.einsum("bc,ce->be", x, self.pr2)
+        #     * self.bilinear_numerical_stability_constant
+        #     + self.pr2_bias
+        # )
+        # x = torch.tanh(torch.einsum("bd,be->bde", pr1, pr2) * math.sqrt(self.config.bilinear_form_dimension)) / math.sqrt(
+        #     self.config.bilinear_form_dimension
+        # )
+        # x = torch.einsum("bde,de->b", x, self.estimator) + self.final_bias
+        x = torch.einsum("bc,c->b", x, self.linear_estimator) + self.final_bias
         logits = torch.sigmoid(x)
         return logits, x
 

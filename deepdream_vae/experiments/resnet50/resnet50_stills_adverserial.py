@@ -1,3 +1,4 @@
+import math
 import os
 import sys
 from typing import Any
@@ -69,7 +70,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         pin_memory=True,
     )
     print("Creating model...")
-    model_conf = DeepdreamVAEConfig(
+    generative_model_conf = DeepdreamVAEConfig(
         n_layers_per_block=config.unet.n_layers_per_block,
         n_blocks=config.unet.n_blocks,
         n_first_block_channels=config.unet.n_first_block_channels,
@@ -80,9 +81,8 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         ln_eps=config.unet.ln_eps,
         image_size=config.image_size,
         n_layers_mini_block=config.unet.n_layers_mini_block,
-        mixing_factor_scale=config.unet.mixing_factor_scale,
     )
-    generative_model = DeepdreamVAE(model_conf)
+    generative_model = DeepdreamVAE(generative_model_conf)
     generative_model.init_weights()
     generative_model.train()
     discriminator_config = DiscriminatorConfig(
@@ -248,7 +248,17 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 for k in range(config.unet.n_blocks + 1):
                     mixing_factors.append(
                         generative_model.mixing_factors[k].item()
-                        * config.unet.mixing_factor_scale
+                        * math.sqrt(
+                            config.unet.n_first_block_channels * 2 ** (config.unet.n_blocks - k)
+                        )
+                    )
+                noise_volumes = []
+                for k in range(config.unet.n_blocks):
+                    noise_volumes.append(
+                        generative_model.noise_volumes[k].item()
+                        * math.sqrt(
+                            config.unet.n_first_block_channels * config.unet.n_blocks * 2 ** k
+                        )
                     )
                 # Log eval metrics to wandb
                 if config.wandb_log:
@@ -270,6 +280,10 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                                 f"mixing_factor_{k}": mixing_factors[k]
                                 for k in range(config.unet.n_blocks + 1)
                             },
+                            **{
+                                f"noise_volume_{k}": noise_volumes[k]
+                                for k in range(config.unet.n_blocks)
+                            },
                             "input_image": wandb.Image(
                                 Image.fromarray(sample_input_image)
                             ),
@@ -287,6 +301,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                     f"Step {step}: eval_generator_loss: {eval_generator_losses.mean().item()}, eval_discriminator_loss: {eval_discriminator_losses.mean().item()}, eval_transformed_discriminator_loss: {eval_transformed_discriminator_losses.mean().item()}, eval_deepdream_discriminator_loss: {eval_deepdream_discriminator_losses.mean().item()}, eval_mixed_discriminator_loss: {eval_mixed_losses.mean().item()}\n"
                     f"train_generator_loss: {train_generator_losses.mean().item()}, train_discriminator_loss: {train_discriminator_losses.mean().item()}\n"
                     f"lr: {config.optimizer.get_lr(step)}, mixing_factors: {mixing_factors}\n"
+                    f"noise_volumes: {noise_volumes}\n"
                 )
             generative_model.train()
             discriminator.train()
