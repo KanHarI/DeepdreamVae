@@ -18,8 +18,8 @@ discriminator:
   device: "cuda"
   _dtype: "float16"
   loss_eps: 1e-4
-  discriminator_cheat_loss: 2e-1
-  cheat_loss_eps: 5e-2  # Lower value = stronger gradient around generator, but more unstable training.
+  discriminator_cheat_loss: 1e-1
+  cheat_loss_eps: 5e-3  # Lower value = stronger gradient around generator, but more unstable training.
   bilinear_form_dimension: 64
 
 optimizer:
@@ -49,7 +49,7 @@ discriminator_generated_loss_factor: 0.2
 discriminator_mixed_loss_factor: 0.6
 generator_lr_multiplier: 1.0
 discriminator_lr_multiplier: 1.0
-scale_factor: 8
+scale_factor: 4
 mixer_gamma: 2.0  # Higher = more samples near the generator, less around reference.
   # Useful for creating better gradients around the generated image.
 save_interval: 5000

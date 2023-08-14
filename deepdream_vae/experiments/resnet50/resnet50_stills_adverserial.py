@@ -249,7 +249,8 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                     mixing_factors.append(
                         generative_model.mixing_factors[k].item()
                         * math.sqrt(
-                            config.unet.n_first_block_channels * 2 ** (config.unet.n_blocks - k)
+                            config.unet.n_first_block_channels
+                            * 2 ** (config.unet.n_blocks - k)
                         )
                     )
                 noise_volumes = []
@@ -257,7 +258,9 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                     noise_volumes.append(
                         generative_model.noise_volumes[k].item()
                         * math.sqrt(
-                            config.unet.n_first_block_channels * config.unet.n_blocks * 2 ** k
+                            config.unet.n_first_block_channels
+                            * config.unet.n_blocks
+                            * 2**k
                         )
                     )
                 # Log eval metrics to wandb
