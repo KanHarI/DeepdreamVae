@@ -1,0 +1,35 @@
+unet:
+  n_blocks: 4
+  n_layers_per_block: 9
+  n_layers_mini_block: 3
+  n_first_block_channels: 6
+  _activation: "new_gelu"
+  ln_eps: 1e-4
+  device: "cuda"
+  _dtype: "float16"
+
+optimizer:
+  _optimizer: "adamw"
+  lr: 1e-4
+  weight_decay: 5e-2
+  lr_schedule: "invsqrt"
+  adam_eps: 1e-4
+  beta1: 0.9
+  beta2: 0.999
+  warmup_iters: 10_000
+  max_iters: 100_000
+  init_std: 2e-2
+  batch_size: 12
+
+source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
+eval_interval: 500
+eval_iters: 50
+log_interval: 10
+wandb_log: true
+wandb_run_name: "first-run"
+image_size: 128
+scale_factor: 4
+save_interval: 5000
+n_blocks_resnet: 1
+l2_consistency_loss_weight: 0.5
+num_diffusion_activations: 4

@@ -1,5 +1,6 @@
 import dataclasses
 import math
+import typing
 from typing import Callable
 
 import torch
@@ -19,6 +20,7 @@ class DeepdreamVAEConfig:
     ln_eps: float
     image_size: int
     n_layers_mini_block: int
+    n_inputs_channels: int = 3
 
 
 class DeepdreamVAE(torch.nn.Module):
@@ -74,7 +76,7 @@ class DeepdreamVAE(torch.nn.Module):
         )
         self.channels_expander = torch.nn.Parameter(
             torch.zeros(
-                (3, self.config.n_first_block_channels),
+                (config.n_inputs_channels, self.config.n_first_block_channels),
                 device=self.config.device,
                 dtype=self.config.dtype,
                 requires_grad=True,
@@ -109,6 +111,16 @@ class DeepdreamVAE(torch.nn.Module):
                 dtype=self.config.dtype,
                 requires_grad=True,
             )
+        )
+        self.output_ln = torch.nn.LayerNorm(
+            [
+                self.config.n_inputs_channels,
+                self.config.image_size,
+                self.config.image_size,
+            ],
+            eps=self.config.ln_eps,
+            device=self.config.device,
+            dtype=self.config.dtype,
         )
 
     def init_weights(self) -> None:
@@ -149,7 +161,7 @@ class DeepdreamVAE(torch.nn.Module):
         # Using the same layer for color-> channels and channels -> color
         # results in much faster initial convergence.
         x = torch.einsum("lc,...chw->...lhw", self.channels_expander, x)
-        return x
+        return typing.cast(torch.Tensor, self.output_ln(x))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.transform(x)
