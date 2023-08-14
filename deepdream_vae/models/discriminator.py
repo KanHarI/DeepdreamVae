@@ -130,7 +130,7 @@ class Discriminator(torch.nn.Module):
         )
 
     def init_weights(self) -> None:
-        torch.nn.init.normal_(self.color_to_channels, std=self.config.init_std)
+        torch.nn.init.normal_(self.color_to_channels, std=1.0)
         for block in self.encoder_blocks:
             block.init_weights()
         torch.nn.init.normal_(self.estimator, std=self.config.init_std)
