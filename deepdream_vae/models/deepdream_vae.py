@@ -115,7 +115,7 @@ class DeepdreamVAE(torch.nn.Module):
         torch.nn.init.normal_(
             self.channels_expander,
             mean=0.0,
-            std=1.0 / math.sqrt(self.config.n_first_block_channels),
+            std=1.0,
         )
         for encoder_block in self.encoder_blocks:
             encoder_block.init_weights()

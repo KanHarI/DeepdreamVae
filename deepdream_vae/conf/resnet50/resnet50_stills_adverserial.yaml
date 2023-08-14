@@ -3,23 +3,23 @@ unet:
   n_layers_per_block: 9
   n_layers_mini_block: 3
   n_first_block_channels: 6
-  _activation: "softplus"
+  _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
-  _dtype: "float32"
+  _dtype: "float16"
 
 discriminator:
   n_blocks: 5
   n_layers_per_block: 6
   n_layers_mini_block: 3
   n_first_block_channels: 12
-  _activation: "softplus"
+  _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
-  _dtype: "float32"
+  _dtype: "float16"
   loss_eps: 1e-4
   discriminator_cheat_loss: 2e-1
-  cheat_loss_eps: 1e-2  # Lower value = stronger gradient around generator, but more unstable training.
+  cheat_loss_eps: 5e-2  # Lower value = stronger gradient around generator, but more unstable training.
   bilinear_form_dimension: 64
 
 optimizer:
