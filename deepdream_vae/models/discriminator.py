@@ -76,9 +76,25 @@ class Discriminator(torch.nn.Module):
                 requires_grad=True,
             )
         )
+        self.pr1_bias = torch.nn.Parameter(
+            torch.zeros(
+                (config.bilinear_form_dimension,),
+                device=config.device,
+                dtype=config.dtype,
+                requires_grad=True,
+            )
+        )
         self.pr2 = torch.nn.Parameter(
             torch.zeros(
                 (num_channels, config.bilinear_form_dimension),
+                device=config.device,
+                dtype=config.dtype,
+                requires_grad=True,
+            )
+        )
+        self.pr2_bias = torch.nn.Parameter(
+            torch.zeros(
+                (config.bilinear_form_dimension,),
                 device=config.device,
                 dtype=config.dtype,
                 requires_grad=True,
@@ -92,7 +108,17 @@ class Discriminator(torch.nn.Module):
                 requires_grad=True,
             )
         )
-        self.bilinear_normalizing_factor = 1 / math.sqrt(config.bilinear_form_dimension)
+        self.bilinear_normalizing_factor = 1 / math.sqrt(
+            num_channels * config.bilinear_form_dimension * config.init_std**2
+        )
+        self.final_bias = torch.nn.Parameter(
+            torch.zeros(
+                (1,),
+                device=config.device,
+                dtype=config.dtype,
+                requires_grad=True,
+            )
+        )
 
     def init_weights(self) -> None:
         torch.nn.init.normal_(self.color_to_channels, std=self.config.init_std)
@@ -101,6 +127,8 @@ class Discriminator(torch.nn.Module):
         torch.nn.init.normal_(self.estimator, std=self.config.init_std)
         torch.nn.init.normal_(self.pr1, std=self.config.init_std)
         torch.nn.init.normal_(self.pr2, std=self.config.init_std)
+        torch.nn.init.normal_(self.pr1_bias, std=self.config.init_std)
+        torch.nn.init.normal_(self.pr2_bias, std=self.config.init_std)
 
     def estimate_is_image_deepdream(
         self, x: torch.Tensor
@@ -112,10 +140,14 @@ class Discriminator(torch.nn.Module):
         x = x.sum(dim=(2, 3))  # (batch_size, num_channels)
         x = self.final_ln(x)
         # Bilinear form to extract features
-        pr1 = torch.einsum("bc,cd->bd", x, self.pr1) * self.bilinear_normalizing_factor
-        pr2 = torch.einsum("bc,ce->be", x, self.pr2) * self.bilinear_normalizing_factor
+        pr1 = (
+            torch.einsum("bc,cd->bd", x, self.pr1) + self.pr1_bias
+        ) * self.bilinear_normalizing_factor
+        pr2 = (
+            torch.einsum("bc,ce->be", x, self.pr2) + self.pr2_bias
+        ) * self.bilinear_normalizing_factor
         x = torch.einsum("bd,be->bde", pr1, pr2)
-        x = torch.einsum("bde,de->b", x, self.estimator)
+        x = torch.einsum("bde,de->b", x, self.estimator) + self.final_bias
         logits = torch.sigmoid(x)
         return logits, x
 
