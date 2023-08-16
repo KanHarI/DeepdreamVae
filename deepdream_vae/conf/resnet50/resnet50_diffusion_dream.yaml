@@ -1,25 +1,25 @@
 unet:
   n_blocks: 4
-  n_layers_per_block: 9
+  n_layers_per_block: 6
   n_layers_mini_block: 3
-  n_first_block_channels: 6
+  n_first_block_channels: 12
   _activation: "new_gelu"
   ln_eps: 1e-4
   device: "cuda"
-  _dtype: "float16"
+  _dtype: "float32"
 
 optimizer:
   _optimizer: "adamw"
   lr: 1e-4
-  weight_decay: 5e-2
+  weight_decay: 1e-1
   lr_schedule: "invsqrt"
   adam_eps: 1e-4
   beta1: 0.9
   beta2: 0.999
-  warmup_iters: 10_000
-  max_iters: 100_000
-  init_std: 2e-2
-  batch_size: 12
+  warmup_iters: 20_000
+  max_iters: 400_000
+  init_std: 5e-3
+  batch_size: 8
 
 source_files_path: "/home/kanhar/workspace/gans/pytorch-deepdream/wider/images"
 eval_interval: 500
@@ -27,9 +27,11 @@ eval_iters: 50
 log_interval: 10
 wandb_log: true
 wandb_run_name: "first-run"
-image_size: 128
-scale_factor: 4
+image_size: 64
+scale_factor: 2
 save_interval: 5000
-n_blocks_resnet: 1
+n_blocks_resnet: 2
 l2_consistency_loss_weight: 0.5
 num_diffusion_activations: 4
+overflow_loss_weight: 1.0
+l2_diffusion_diff_loss_weight: 0.1

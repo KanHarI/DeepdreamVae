@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 from typing import Any, Iterator
 
@@ -121,6 +122,12 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         device="cpu",
     )
     train_consistency_losses += float("inf")
+    train_diffusions_diffs = torch.zeros(
+        (config.eval_interval,),
+        dtype=torch.float32,
+        device="cpu",
+    )
+    train_diffusions_diffs += float("inf")
     for step in range(config.optimizer.max_iters):
         if step % config.eval_interval == 0:
             with torch.no_grad():
@@ -141,16 +148,25 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                     dtype=torch.float32,
                     device="cpu",
                 )
+                eval_diffusions_diffs = torch.zeros(
+                    (config.eval_iters,),
+                    dtype=torch.float32,
+                    device="cpu",
+                )
                 for j in tqdm(range(config.eval_iters)):
                     batch = next(test_dataloader)
                     batch = batch.to(config.unet.device, config.unet.dtype)
                     diffused = [batch]
                     resnet_activations_sums = [partial_resnet(batch).mean()]
                     resnet_activations_deltas = []
+                    total_overflow = torch.zeros(
+                        1, device=config.unet.device, dtype=config.unet.dtype
+                    )
                     for t in range(config.num_diffusion_activations):
-                        diffused.append(
-                            forward_diffusion_model(diffused[-1])
-                        )  # Only keep RGB channels
+                        next_diffused = forward_diffusion_model(diffused[-1])
+                        # Clip to [-1, 1]
+                        diffused.append(torch.clamp(next_diffused, -1, 1))
+                        total_overflow += ((next_diffused - diffused[-1]) ** 2).mean()
                         resnet_activations_sums.append(
                             partial_resnet(diffused[-1]).mean()
                         )
@@ -160,13 +176,24 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                     stacked_resnet_activations_deltas = torch.stack(
                         resnet_activations_deltas, dim=0
                     )
+                    diffusion_diff = torch.zeros(
+                        (1,), device=config.unet.device, dtype=config.unet.dtype
+                    )
+                    for i in range(config.num_diffusion_activations):
+                        diffusion_diff += (
+                            (diffused[i] - diffused[i + 1]) ** 2
+                        ).mean() / config.num_diffusion_activations
                     undiffused = [diffused[-1]]
                     for t in range(config.num_diffusion_activations):
-                        undiffused.append(backward_diffusion_model(undiffused[-1]))
+                        next_undiffused = backward_diffusion_model(undiffused[-1])
+                        undiffused.append(torch.clamp(next_undiffused, -1, 1))
+                        total_overflow += (
+                            (next_undiffused - undiffused[-1]) ** 2
+                        ).mean()
                     undiffused = undiffused[::-1]
                     reconstructions_l2s = torch.stack(
                         [
-                            torch.sqrt(((diffused[k] - undiffused[k]) ** 2).mean())
+                            ((diffused[k] - undiffused[k]) ** 2).mean()
                             for k in range(config.num_diffusion_activations)
                         ],
                         dim=0,
@@ -185,6 +212,7 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                         eval_resnet_losses[j]
                         + eval_consistency_losses[j] * config.l2_consistency_loss_weight
                     )
+                    eval_diffusions_diffs[j] = diffusion_diff.item()
                 eval_loss = eval_losses.mean().item()
                 eval_resnet_loss = eval_resnet_losses.mean().item()
                 eval_consistency_loss = eval_consistency_losses.mean().item()
@@ -197,13 +225,20 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                 train_loss_std = train_losses.std().item()
                 train_resnet_loss_std = train_resnet_losses.std().item()
                 train_consistency_loss_std = train_consistency_losses.std().item()
+                eval_diffusions_diff = eval_diffusions_diffs.mean().item()
+                train_diffusions_diff = train_diffusions_diffs.mean().item()
                 print(
                     f"Step {step}: Eval loss: {eval_loss:.3f} +- {eval_loss_std:.3f} (resnet: {eval_resnet_loss:.3f} +- {eval_resnet_loss_std:.3f}, consistency: {eval_consistency_loss:.3f} +- {eval_consistency_loss_std:.3f}),"
                     f"Train loss: {train_loss:.3f} +- {train_loss_std:.3f} (resnet: {train_resnet_loss:.3f} +- {train_resnet_loss_std:.3f}, consistency: {train_consistency_loss:.3f} +- {train_consistency_loss_std:.3f})"
+                    f"Total overflow: {total_overflow.item()}, diffused diff: {eval_diffusions_diff}, train diffused diff: {train_diffusions_diff}",
                 )
                 source_image = batch[0] * 0.5 + 0.5
                 diffused_image = diffused[-1][0] * 0.5 + 0.5
                 undiffused_image = undiffused[0][0] * 0.5 + 0.5
+                # Clip to [0, 1]
+                source_image = torch.clamp(source_image, 0, 1)
+                diffused_image = torch.clamp(diffused_image, 0, 1)
+                undiffused_image = torch.clamp(undiffused_image, 0, 1)
                 if config.wandb_log:
                     wandb.log(
                         {
@@ -222,6 +257,9 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
                             "source_image": wandb.Image(source_image),
                             "diffused_image": wandb.Image(diffused_image),
                             "undiffused_image": wandb.Image(undiffused_image),
+                            "total_overflow": total_overflow.item(),
+                            "diffused_diff": eval_diffusions_diff,
+                            "train_diffused_diff": train_diffusions_diff,
                         },
                         step=step,
                     )
@@ -262,23 +300,38 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
         diffused = [batch]
         resnet_activations_sums = [partial_resnet(batch).mean()]
         resnet_activations_deltas = []
-        for t in range(config.num_diffusion_activations):
-            diffused.append(forward_diffusion_model(diffused[-1]))
+        num_active_in_step = random.randint(1, config.num_diffusion_activations)
+        total_overflow = torch.zeros(
+            1, device=config.unet.device, dtype=config.unet.dtype
+        )
+        for t in range(num_active_in_step):
+            next_diffused = forward_diffusion_model(diffused[-1])
+            diffused.append(torch.clamp(next_diffused, -1, 1))
+            total_overflow += ((next_diffused - diffused[-1]) ** 2).mean()
             resnet_activations_sums.append(partial_resnet(diffused[-1]).mean())
             resnet_activations_deltas.append(
                 resnet_activations_sums[-1] - resnet_activations_sums[-2]
+            )
+        diffusion_diff = torch.zeros(
+            (1,), device=config.unet.device, dtype=config.unet.dtype
+        )
+        for i in range(num_active_in_step):
+            diffusion_diff += ((diffused[i] - diffused[i + 1]) ** 2).mean() / (
+                num_active_in_step
             )
         stacked_resnet_activations_deltas = torch.stack(
             resnet_activations_deltas, dim=0
         )
         undiffused = [diffused[-1]]
-        for t in range(config.num_diffusion_activations):
-            undiffused.append(backward_diffusion_model(undiffused[-1]))
+        for t in range(num_active_in_step):
+            next_undiffused = backward_diffusion_model(undiffused[-1])
+            undiffused.append(torch.clamp(next_undiffused, -1, 1))
+            total_overflow += ((next_undiffused - undiffused[-1]) ** 2).mean()
         undiffused = undiffused[::-1]
         reconstructions_l2s = torch.stack(
             [
-                torch.sqrt(((diffused[k] - undiffused[k]) ** 2).mean())
-                for k in range(config.num_diffusion_activations)
+                ((diffused[k] - undiffused[k]) ** 2).mean()
+                for k in range(num_active_in_step)
             ],
             dim=0,
         )
@@ -290,16 +343,29 @@ def main(hydra_cfg: dict[Any, Any]) -> int:
             "t,t->", resnet_activations_softmins, stacked_resnet_activations_deltas
         )
         consistency_loss = reconstructions_l2s.mean()
-        loss = resnet_loss + consistency_loss * config.l2_consistency_loss_weight
+        loss = (
+            resnet_loss
+            + consistency_loss * config.l2_consistency_loss_weight
+            + total_overflow * config.overflow_loss_weight
+            + diffusion_diff * config.l2_diffusion_diff_loss_weight
+        )
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = config.optimizer.get_lr(step)
         optimizer.zero_grad()
         loss.backward()  # type: ignore
+        # Print gradients
+        # for name, param in forward_diffusion_model.named_parameters():
+        #     print(name, param.grad)
+        # for name, param in backward_diffusion_model.named_parameters():
+        #     print(name, param.grad)
         optimizer.step()
         train_losses[step % config.eval_interval] = loss.item()
         train_resnet_losses[step % config.eval_interval] = resnet_loss.item()
         train_consistency_losses[step % config.eval_interval] = consistency_loss.item()
+        train_diffusions_diffs[step % config.eval_interval] = diffusion_diff.item()
         if step % config.log_interval == 0:
             print(
-                f"Step {step}: Loss: {loss.item():.3f} (resnet: {resnet_loss.item():.3f}, consistency: {consistency_loss.item():.3f})"
+                f"Step {step}: Loss: {loss.item():.3f} (resnet: {resnet_loss.item():.3f}, consistency: {consistency_loss.item():.3f}, overflow: {total_overflow.item()}, diffused diff: {diffusion_diff.item()})"
             )
     return 0
 

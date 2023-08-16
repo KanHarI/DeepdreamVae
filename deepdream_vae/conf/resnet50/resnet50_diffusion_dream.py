@@ -20,3 +20,5 @@ class Resnet50DiffusionDreamExperimentConf:
     n_blocks_resnet: int
     l2_consistency_loss_weight: float
     num_diffusion_activations: int
+    overflow_loss_weight: float
+    l2_diffusion_diff_loss_weight: float

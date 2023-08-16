@@ -1,6 +1,5 @@
 import dataclasses
 import math
-import typing
 from typing import Callable
 
 import torch
@@ -127,7 +126,7 @@ class DeepdreamVAE(torch.nn.Module):
         torch.nn.init.normal_(
             self.channels_expander,
             mean=0.0,
-            std=1.0,
+            std=1,
         )
         for encoder_block in self.encoder_blocks:
             encoder_block.init_weights()
@@ -161,7 +160,9 @@ class DeepdreamVAE(torch.nn.Module):
         # Using the same layer for color-> channels and channels -> color
         # results in much faster initial convergence.
         x = torch.einsum("lc,...chw->...lhw", self.channels_expander, x)
-        return typing.cast(torch.Tensor, self.output_ln(x))
+        # return typing.cast(torch.Tensor, self.output_ln(x))
+        # print(x.min().item(), x.max().item(), x.std().item())
+        return x
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.transform(x)
